@@ -5,11 +5,31 @@
   "scripts": {
     "serve": "vue-cli-service serve",
     "build": "vue-cli-service build",
-    "electron-d": "cross-env NODE_ENV=development electron .",
-    "electron:build": "build && electron-builder",
-    "electron:serve": "npm run serve && npm run electron-d"
+    "server": "node server/index.js",
+    "electron:serve": "cross-env NODE_ENV=development electron .",
+    "electron:build": "electron-builder"
   },
-  "main": "main.js",
+  "build": {
+    "appId": "com.example.myapp",
+    "productName": "音译",
+    "directories": {
+      "output": "ipa"
+    },
+
+    "files": [
+      "**/*",
+      "!src"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "build/icon.ico"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "build/icon.icns"
+    }
+  },
+  "main": "./out/main/main.js",
   "dependencies": {
     "core-js": "^3.8.3",
     "vue": "^3.2.13",
