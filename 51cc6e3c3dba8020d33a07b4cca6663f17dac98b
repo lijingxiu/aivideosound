@@ -1,0 +1,116 @@
+vue-electron-app/src/views/NewProjectView.vue
+  066c7d60fa4ae69f 1-30
+vue-electron-app/out/preload/index.js
+  8342a4c45d15abab 1-9
+vue-electron-app/src/components/common/AppLogo.vue
+  8342a4c45d15abab 1-60
+vue-electron-app/out/main/main.js
+  8342a4c45d15abab 1-44
+vue-electron-app/src/views/HomeView.vue
+  8342a4c45d15abab 2-13,15-59,61-80,84-127,131-173,177-396
+  066c7d60fa4ae69f 14,60
+vue-electron-app/src/components/project/VideoPreview.vue
+  8342a4c45d15abab 1-174
+vue-electron-app/src/components/project/VideoUploadArea.vue
+  8342a4c45d15abab 1-96
+vue-electron-app/src/views/LoginView.vue
+  8342a4c45d15abab 1-753
+vue-electron-app/src/utils/wechatLogin.js
+  8342a4c45d15abab 1-61
+vue-electron-app/src/components/project/SubtitleSelectBox.vue
+  8342a4c45d15abab 1-143
+vue-electron-app/src/components/login/LoginIllustration.vue
+  8342a4c45d15abab 1-173
+vue-electron-app/src/config/index.js
+  8342a4c45d15abab 1
+vue-electron-app/src/utils/pointsCalculator.js
+  8342a4c45d15abab 1-31
+vue-electron-app/src/components/project/VideoListPanel.vue
+  8342a4c45d15abab 1-164
+vue-electron-app/.env.development
+  8342a4c45d15abab 1
+vue-electron-app/server/index.js
+  8342a4c45d15abab 1-193
+vue-electron-app/src/utils/videoValidator.js
+  8342a4c45d15abab 1-81
+vue-electron-app/src/router/index.js
+  8342a4c45d15abab 2,5-10,14-15,42-53
+  066c7d60fa4ae69f 16-27,30-33
+vue-electron-app/package.json
+  8342a4c45d15abab 8-10,12-32
+vue-electron-app/src/assets/styles/global.scss
+  8342a4c45d15abab 1-56
+vue-electron-app/src/components/common/AppIcon.vue
+  8342a4c45d15abab 1-61
+vue-electron-app/public/index.html
+  8342a4c45d15abab 8
+vue-electron-app/src/components/layout/AppLayout.vue
+  8342a4c45d15abab 1-310
+vue-electron-app/src/App.vue
+  8342a4c45d15abab 2,5-6,9,11
+vue-electron-app/.cursorindexingignore
+  8342a4c45d15abab 1-3
+vue-electron-app/server/.env.example
+  8342a4c45d15abab 1-9
+vue-electron-app/src/api/request.js
+  8342a4c45d15abab 1-38
+vue-electron-app/src/api/project.js
+  8342a4c45d15abab 1-12
+vue-electron-app/src/components/common/ToggleSwitch.vue
+  8342a4c45d15abab 1-58
+vue-electron-app/src/components/common/AppTooltip.vue
+  8342a4c45d15abab 1-55
+vue-electron-app/src/views/VideoEditView.vue
+  066c7d60fa4ae69f 1-12
+vue-electron-app/vue.config.js
+  8342a4c45d15abab 3-14
+vue-electron-app/src/store/index.js
+  8342a4c45d15abab 3-13,16,19,22-29,32-37
+vue-electron-app/server/package.json
+  8342a4c45d15abab 1-15
+vue-electron-app/src/components/common/InfoTooltip.vue
+  8342a4c45d15abab 1-33
+vue-electron-app/src/api/auth.js
+  8342a4c45d15abab 1-9
+vue-electron-app/src/views/ProjectDetailView.vue
+  066c7d60fa4ae69f 1-32
+vue-electron-app/src/components/project/SubmitProgressModal.vue
+  8342a4c45d15abab 1-136
+vue-electron-app/src/constants/project.js
+  8342a4c45d15abab 1-49
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "bzl_git_version": "0.1.31",
+  "base_commit_sha": "51cc6e3c3dba8020d33a07b4cca6663f17dac98b",
+  "prompts": {
+    "066c7d60fa4ae69f": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a02e8d-11dc-7c12-b41a-351d97c98316",
+        "model": "gpt-5.6-luna",
+        "ide": "codex-desktop"
+      },
+      "human_author": "liqiang",
+      "messages": [],
+      "total_additions": 197,
+      "total_deletions": 10,
+      "accepted_lines": 189,
+      "overriden_lines": 0
+    },
+    "8342a4c45d15abab": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "c88f6097-159c-4044-80fd-0f132725041c",
+        "model": "default",
+        "ide": "cursor"
+      },
+      "human_author": "liqiang",
+      "messages": [],
+      "total_additions": 9938,
+      "total_deletions": 346,
+      "accepted_lines": 9313,
+      "overriden_lines": 17
+    }
+  }
+}
