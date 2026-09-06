@@ -5,12 +5,12 @@ module.exports = defineConfig({
     devtool: 'source-map'
   },
   devServer: {
-    proxy: {
-      '/api': {
-        target: 'http://localhost:3001',
-        changeOrigin: true
-      }
-    }
+    // proxy: {
+    //   '/api': {
+    //     target: 'http://localhost:3001',
+    //     changeOrigin: true
+    //   }
+    // }
   },
   transpileDependencies: true
 })

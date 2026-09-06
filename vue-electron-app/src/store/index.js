@@ -1,4 +1,7 @@
-import { createStore } from 'vuex'
+import Vue from 'vue'
+import Vuex from 'vuex'
+
+Vue.use(Vuex)
 
 const AUTH_KEY = 'qianyin_auth'
 
@@ -11,7 +14,7 @@ function loadAuth() {
   }
 }
 
-export default createStore({
+export default new Vuex.Store({
   state: {
     user: loadAuth()
   },

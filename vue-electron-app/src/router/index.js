@@ -1,5 +1,8 @@
-import { createRouter, createWebHashHistory } from 'vue-router'
+import Vue from 'vue'
+import Router from 'vue-router'
 import store from '../store'
+
+Vue.use(Router)
 
 const routes = [
   {
@@ -34,8 +37,8 @@ const routes = [
   }
 ]
 
-const router = createRouter({
-  history: createWebHashHistory(),
+const router = new Router({
+  mode: 'hash',
   routes
 })
 

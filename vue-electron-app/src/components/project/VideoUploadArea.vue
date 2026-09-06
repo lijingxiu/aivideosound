@@ -10,11 +10,7 @@
     <input ref="fileInput" type="file" multiple accept="video/*,.mp4,.avi,.mov,.wmv,.mkv,.flv,.ts" hidden @change="handleInput" />
 
     <div class="upload-area__icon">
-      <svg viewBox="0 0 64 64" width="48" height="48">
-        <rect x="8" y="16" width="40" height="32" rx="4" fill="none" stroke="#ccc" stroke-width="2"/>
-        <path d="M24 32l8 8 16-16" fill="none" stroke="#ff7a00" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M36 8v12M30 14h12" stroke="#ccc" stroke-width="2" stroke-linecap="round"/>
-      </svg>
+      <img src="@/assets/upload-file.png" alt="上传文件" width="40" height="40">
     </div>
 
     <p class="upload-area__title">请选择视频文件，或将其拖放到这里</p>
