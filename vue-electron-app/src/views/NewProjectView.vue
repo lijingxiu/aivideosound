@@ -1,7 +1,7 @@
 <template>
   <div class="new-project">
     <div class="page-head" @click="$router.back()">
-      <button class="back" aria-label="返回" title="返回" >‹</button>
+      <button class="back" aria-label="返回" title="返回">‹</button>
       <h2>新增项目</h2>
     </div>
     <input ref="videoPicker" type="file" multiple accept="video/*,.mp4,.avi,.mov,.wmv,.mkv,.flv,.ts" hidden
@@ -13,12 +13,15 @@
       <VideoPreview v-if="videos.length" :video="activeVideo"
                     :show-select-box="subtitleSource === 'ocr' || subtitleErase" v-model:region="region"/>
       <section class="settings">
-        <label>项目名称 <el-input v-model.trim="projectName" maxlength="20" placeholder="请输入" class="project-name-input"></el-input><em>{{
-            projectName.length
-          }}/20</em></label>
+        <label>项目名称
+          <el-input v-model.trim="projectName" maxlength="20" placeholder="请输入"
+                    class="project-name-input"></el-input>
+          <em>{{
+              projectName.length
+            }}/20</em></label>
         <label>源语言
           <el-select v-model="sourceLanguage" placeholder="请选择" class="language-select">
-            <el-option v-for="l in languages" :key="l.value" :label="l.label" :value="l.value"></el-option>
+          <el-option v-for="l in languages" :key="l.code" :label="l.name" :value="l.code"></el-option>
           </el-select>
         </label>
         <div class="setting-block">
@@ -30,43 +33,48 @@
                   <span>{{ s.label }}<small v-if="s.tag">（{{ s.tag }}）</small></span>
                 </el-tooltip>
               </span>
-              <div v-if="subtitleSource === 'asr'">
+              <div v-if="subtitleSource === 'asr' || subtitleSource === 'ocr'">
                 <div class="segment-setting-row">
                   <span>角色识别
-                    <el-tooltip content="智能识别对话角色，方便多角色译制配音。视频中存在多角色且需要译制配音时建议开启；仅字幕翻译不配音无需开启。" placement="top">
+                    <el-tooltip
+                      content="智能识别对话角色，方便多角色译制配音。视频中存在多角色且需要译制配音时建议开启；仅字幕翻译不配音无需开启。"
+                      placement="top">
                       <i class="setting-info">i</i>
                     </el-tooltip>
                   </span>
-                  <el-tooltip content="20积分/分钟，译制配音项目建议开启，关闭后译制配音仅支持手动选择AI配音员。" placement="top">
-                    <el-switch v-model="roleRecognition" active-color="#ed6200" inactive-color="#d9d9d9" />
+                  <el-tooltip content="20积分/分钟，译制配音项目建议开启，关闭后译制配音仅支持手动选择AI配音员。"
+                              placement="top">
+                    <el-switch v-model="roleRecognition" active-color="#ed6200" inactive-color="#d9d9d9"/>
                   </el-tooltip>
                 </div>
-                <p v-if="!roleRecognition" class="role-recognition-hint">注：关闭角色识别，译制配音时仅支持手动选择AI配音员</p>
+                <p v-if="!roleRecognition" class="role-recognition-hint">
+                  注：关闭角色识别，译制配音时仅支持手动选择AI配音员</p>
                 <div class="segment-setting-row">
                   <span>人声背景音分离
-                    <el-tooltip content="智能分离视频中的人声和背景音，提升语音识别和角色识别的准确性。视频中存在背景音乐且需要语音识别或角色识别时建议开启；译制配音需要保留背景音时开启。" placement="top">
+                    <el-tooltip
+                      content="智能分离视频中的人声和背景音，提升语音识别和角色识别的准确性。视频中存在背景音乐且需要语音识别或角色识别时建议开启；译制配音需要保留背景音时开启。"
+                      placement="top">
                       <i class="setting-info">i</i>
                     </el-tooltip>
                   </span>
-                  <el-tooltip content="20积分/分钟，视频存在背景音或音效时建议开启，关闭后可能会影响语音识别和译制配音效果" placement="top">
-                    <el-switch v-model="vocalSeparation" active-color="#ed6200" inactive-color="#d9d9d9" />
+                  <el-tooltip
+                    content="20积分/分钟，视频存在背景音或音效时建议开启，关闭后可能会影响语音识别和译制配音效果"
+                    placement="top">
+                    <el-switch v-model="vocalSeparation" active-color="#ed6200" inactive-color="#d9d9d9"/>
                   </el-tooltip>
                 </div>
                 <div class="segment-setting-row">
                   <span>字幕擦除</span>
                   <el-tooltip content="200积分/分钟，自动识别字幕内容并智能擦除，恢复原视频内容" placement="top">
-                    <el-switch v-model="subtitleErase" active-color="#ed6200" inactive-color="#d9d9d9" />
+                    <el-switch v-model="subtitleErase" active-color="#ed6200" inactive-color="#d9d9d9"/>
                   </el-tooltip>
 
                 </div>
               </div>
-              <div v-if="subtitleSource === 'ocr'">
-
-              </div>
               <div v-if="subtitleSource === 'upload'" class="subtitle-folder" @click="openSubtitlePicker">
                 <input
-                ref="subtitleInput" type="file" webkitdirectory directory multiple hidden
-                @change="selectSubtitleFolder"><strong>请选择<span>字幕文件所在位置</span></strong>
+                  ref="subtitleInput" type="file" webkitdirectory directory multiple hidden
+                  @change="selectSubtitleFolder"><strong>请选择<span>字幕文件所在位置</span></strong>
                 <p>{{ subtitleFolder || '系统会自动匹配与视频文件同名的srt字幕文件' }}</p></div>
 
 
@@ -88,10 +96,10 @@ import VideoUploadArea from '@/components/project/VideoUploadArea.vue';
 import VideoListPanel from '@/components/project/VideoListPanel.vue';
 import VideoPreview from '@/components/project/VideoPreview.vue';
 import SubmitProgressModal from '@/components/project/SubmitProgressModal.vue';
-import {SOURCE_LANGUAGES, SUBTITLE_SOURCES, MAX_VIDEO_COUNT} from '@/constants/project';
+import {SUBTITLE_SOURCES, MAX_VIDEO_COUNT} from '@/constants/project';
 import {validateVideoFile, naturalSort} from '@/utils/videoValidator';
 import {calcTotalPoints} from '@/utils/pointsCalculator';
-import {fetchUserPoints, submitProjectTask} from '@/api/project'
+import {fetchProjectInfo, fetchUserPoints, submitProjectTask} from '@/api/project'
 
 export default {
   components: {AppTooltip, VideoUploadArea, VideoListPanel, VideoPreview, SubmitProgressModal},
@@ -110,9 +118,13 @@ export default {
     submitting: false,
     step: 0,
     status: 'active',
-    languages: SOURCE_LANGUAGES,
-    subtitleSources: SUBTITLE_SOURCES
+    languages: [],
+    subtitleSources: SUBTITLE_SOURCES,
+    projectInfo: null
   }),
+  created() {
+    this.loadProjectInfo()
+  },
   computed: {
     activeVideo() {
       return this.videos.find(v => v.id === this.activeId) || this.videos[0]
@@ -126,9 +138,19 @@ export default {
     }
   },
   methods: {
+    async loadProjectInfo() {
+      try {
+        const response = await fetchProjectInfo()
+        this.projectInfo = response.data
+        this.languages = response.data?.languageList || []
+      } catch (error) {
+        console.error('获取项目配置失败', error)
+      }
+    },
     openVideoPicker() {
       this.$refs.videoPicker?.click()
-    }, addVideos(files) {
+    },
+    addVideos(files) {
       if (this.videos.length + files.length > MAX_VIDEO_COUNT) return alert('单次任务不能超过100个视频');
       const next = files.map((f, i) => {
         const e = validateVideoFile(f);
@@ -276,7 +298,7 @@ export default {
   height: 34px;
 }
 
-.project-name-input ::v-deep  .el-input__inner {
+.project-name-input ::v-deep .el-input__inner {
   height: 34px;
   line-height: 34px;
   border-radius: 6px;
@@ -384,7 +406,7 @@ export default {
 }
 
 .estimate {
-  text-align: right;
+  text-align: center;
   margin-top: 30px
 }
 

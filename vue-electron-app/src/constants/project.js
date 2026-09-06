@@ -5,19 +5,6 @@ export const MAX_VIDEO_SIZE = 4 * 1024 * 1024 * 1024
 export const MIN_VIDEO_DURATION = 10
 export const MAX_VIDEO_DURATION = 120 * 60
 
-export const SOURCE_LANGUAGES = [
-  { label: '中文', value: 'zh' },
-  { label: '英语', value: 'en' },
-  { label: '日语', value: 'ja' },
-  { label: '韩语', value: 'ko' },
-  { label: '法语', value: 'fr' },
-  { label: '德语', value: 'de' },
-  { label: '西班牙语', value: 'es' },
-  { label: '俄语', value: 'ru' },
-  { label: '阿拉伯语', value: 'ar' },
-  { label: '葡萄牙语', value: 'pt' }
-]
-
 export const SUBTITLE_SOURCES = [
   {
     value: 'asr',
