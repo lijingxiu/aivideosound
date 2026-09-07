@@ -26,7 +26,7 @@
         </label>
         <div class="setting-block">
           <div>字幕来源</div>
-          <el-tabs v-model="subtitleSource" type="border-card" class="subtitle-tabs">
+          <el-tabs style="" v-model="subtitleSource" type="border-card" class="subtitle-tabs">
             <el-tab-pane v-for="s in subtitleSources" :key="s.value" :name="s.value">
               <span slot="label">
                 <el-tooltip :content="s.tooltip" placement="top">
@@ -448,4 +448,8 @@ export default {
   .settings {
     grid-column: auto
   }
-}</style>
+}
+.subtitle-tabs {
+  overflow: hidden;
+}
+</style>
