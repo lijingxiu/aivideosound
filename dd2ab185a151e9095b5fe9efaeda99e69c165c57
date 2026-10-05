@@ -1,0 +1,42 @@
+vue-electron-app/src/views/NewProjectView.vue
+  f8d470643f397b27 8,14-16,102,104,129-134,149-160,170-193,195-246,254,256,260-261,267-333,335-344,346-347,350-351,356-359,361,363-366,370-372,374-389,394
+vue-electron-app/src/api/project.js
+  f8d470643f397b27 3,9-10,13-18
+vue-electron-app/src/components/project/VideoListPanel.vue
+  f8d470643f397b27 18-21,61-62,91-92,94,126-150,152-159
+vue-electron-app/src/components/project/VideoPreview.vue
+  f8d470643f397b27 16,18
+vue-electron-app/src/constants/project.js
+  f8d470643f397b27 13
+vue-electron-app/out/preload/index.js
+  f8d470643f397b27 2,8-16
+vue-electron-app/src/components/project/SubtitleSelectBox.vue
+  f8d470643f397b27 2,9,18,25,38,63,69,98,115-116,123-129,132
+vue-electron-app/package.json
+  f8d470643f397b27 22-24,38
+vue-electron-app/src/utils/pointsCalculator.js
+  f8d470643f397b27 5-7,12-15,36-38
+vue-electron-app/out/main/main.js
+  f8d470643f397b27 1-24,31,38-39,41,45-50,53-67,69-74,77-108,110-128
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "bzl_git_version": "0.1.36",
+  "base_commit_sha": "dd2ab185a151e9095b5fe9efaeda99e69c165c57",
+  "prompts": {
+    "f8d470643f397b27": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "c88f6097-159c-4044-80fd-0f132725041c",
+        "model": "gpt-5.6-terra",
+        "ide": "cursor"
+      },
+      "human_author": "liqiang",
+      "transcript_path": "/Users/administrator/.cursor/projects/Users-administrator-code-aivideosound-vue-electron-app/agent-transcripts/c88f6097-159c-4044-80fd-0f132725041c/c88f6097-159c-4044-80fd-0f132725041c.jsonl",
+      "total_additions": 3871,
+      "total_deletions": 122,
+      "accepted_lines": 416,
+      "overriden_lines": 3
+    }
+  }
+}
