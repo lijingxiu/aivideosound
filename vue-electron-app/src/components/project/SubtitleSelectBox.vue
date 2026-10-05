@@ -1,12 +1,12 @@
 <template>
-  <div ref="containerRef" class="select-box" :style="boxStyle" @mousedown.stop="startDrag">
+  <div ref="containerRef" class="select-box" :style="boxStyle" @mousedown.stop.prevent="startDrag">
     <div class="select-box__label">{{ label }}</div>
     <div
       v-for="handle in handles"
       :key="handle"
       class="select-box__handle"
       :class="`select-box__handle--${handle}`"
-      @mousedown.stop="startResize(handle, $event)"
+      @mousedown.stop.prevent="startResize(handle, $event)"
     />
   </div>
 </template>
@@ -15,14 +15,14 @@
 export default {
   name: 'SubtitleSelectBox',
   props: {
-    modelValue: {
+    value: {
       type: Object,
       default: () => ({ x: 0.1, y: 0.65, w: 0.8, h: 0.2 })
     },
     label: { type: String, default: '请框选字幕区域（对所有视频有效）' },
     containerRef: { type: Object, default: null }
   },
-  emits: ['update:modelValue'],
+  emits: ['input'],
   data() {
     return {
       dragging: false,
@@ -35,7 +35,7 @@ export default {
   },
   computed: {
     boxStyle() {
-      const { x, y, w, h } = this.modelValue
+      const { x, y, w, h } = this.value
       return {
         left: `${x * 100}%`,
         top: `${y * 100}%`,
@@ -60,13 +60,13 @@ export default {
       this.dragging = true
       this.startX = e.clientX
       this.startY = e.clientY
-      this.startBox = { ...this.modelValue }
+      this.startBox = { ...this.value }
     },
     startResize(handle, e) {
       this.resizing = handle
       this.startX = e.clientX
       this.startY = e.clientY
-      this.startBox = { ...this.modelValue }
+      this.startBox = { ...this.value }
     },
     onMouseMove(e) {
       if (!this.dragging && !this.resizing) return
@@ -95,7 +95,7 @@ export default {
         }
       }
 
-      this.$emit('update:modelValue', { x, y, w, h })
+      this.$emit('input', { x, y, w, h })
     },
     onMouseUp() {
       this.dragging = false
@@ -112,18 +112,24 @@ export default {
   background: rgba(255, 122, 0, 0.15);
   cursor: move;
   box-sizing: border-box;
+  user-select: none;
+  touch-action: none;
 
   &__label {
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    padding: 4px 8px;
-    font-size: 12px;
-    color: #ff7a00;
+    padding: 5px 10px;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.72);
+    font-size: 13px;
+    font-weight: 500;
+    color: #fff;
+    line-height: 1.4;
     white-space: nowrap;
     pointer-events: none;
-    text-shadow: 0 0 4px #fff;
+    text-shadow: none;
   }
 
   &__handle {

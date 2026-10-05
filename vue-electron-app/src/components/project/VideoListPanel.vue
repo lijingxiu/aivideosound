@@ -15,7 +15,10 @@
         @click="$emit('select', video.id)"
       >
         <span class="video-item__index">{{ index + 1 }}</span>
-        <button class="video-item__delete" @click.stop="$emit('remove', video.id)">🗑</button>
+        <button class="video-item__delete" aria-label="删除视频" title="删除视频"
+                @click.stop="$emit('remove', video.id)">
+          <span aria-hidden="true">×</span>
+        </button>
         <div class="video-item__thumb">
           <img v-if="video.thumbnail" :src="video.thumbnail" alt="" />
           <span v-else class="video-item__thumb-placeholder">▶</span>
@@ -55,6 +58,8 @@ export default {
   display: flex;
   flex-direction: column;
   height: 100%;
+  min-height: 0;
+  max-height: 100%;
   padding: 16px;
   background: #fff;
   border: 1px solid #eee;
@@ -83,7 +88,10 @@ export default {
 
   &__list {
     flex: 1;
+    min-height: 0;
+    max-height: 100%;
     overflow-y: auto;
+    overflow-x: hidden;
     display: flex;
     flex-direction: column;
     gap: 10px;
@@ -115,12 +123,40 @@ export default {
   &__delete {
     position: absolute;
     top: 6px;
-    right: 8px;
-    font-size: 14px;
-    opacity: 0.6;
+    right: 6px;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border: 1px solid #ffb3a7;
+    border-radius: 50%;
+    background: #fff1ef;
+    color: #d4380d;
+    font-size: 22px;
+    font-weight: 400;
+    line-height: 1;
+    cursor: pointer;
+    opacity: 1;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
 
+    span {
+      display: block;
+      width: 100%;
+      line-height: 24px;
+      transform: translateY(-1px);
+    }
     &:hover {
-      opacity: 1;
+      border-color: #d4380d;
+      background: #d4380d;
+      color: #fff;
+    }
+
+    &:focus-visible {
+      outline: 2px solid #ff7a00;
+      outline-offset: 2px;
     }
   }
 

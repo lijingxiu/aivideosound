@@ -13,8 +13,9 @@
 
       <SubtitleSelectBox
         v-if="showSelectBox"
-        v-model="localRegion"
+        :value="localRegion"
         :label="selectLabel"
+        @input="localRegion = $event"
       />
     </div>
 

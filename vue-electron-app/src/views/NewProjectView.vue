@@ -5,13 +5,15 @@
       <h2>新增项目</h2>
     </div>
     <input ref="videoPicker" type="file" multiple accept="video/*,.mp4,.avi,.mov,.wmv,.mkv,.flv,.ts" hidden
-           @change="addVideos([...$event.target.files])">
+           @change="handleVideoInput">
     <div class="workspace" :class="{ 'workspace--empty': !videos.length }">
       <VideoUploadArea v-if="!videos.length" @select="addVideos"/>
       <VideoListPanel v-else :videos="videos" :active-id="activeId" @upload="openVideoPicker"
                       @select="activeId = $event" @remove="removeVideo"/>
       <VideoPreview v-if="videos.length" :video="activeVideo"
-                    :show-select-box="subtitleSource === 'ocr' || subtitleErase" v-model:region="region"/>
+                    :show-select-box="subtitleSource === 'ocr' || subtitleErase"
+                    :select-label="subtitleErase ? '拖动调整擦除位置' : '请框选字幕区域（对所有视频有效）'"
+                    :region="region" @update:region="region = $event"/>
       <section class="settings">
         <label>项目名称
           <el-input v-model.trim="projectName" maxlength="20" placeholder="请输入"
@@ -97,9 +99,9 @@ import VideoListPanel from '@/components/project/VideoListPanel.vue';
 import VideoPreview from '@/components/project/VideoPreview.vue';
 import SubmitProgressModal from '@/components/project/SubmitProgressModal.vue';
 import {SUBTITLE_SOURCES, MAX_VIDEO_COUNT} from '@/constants/project';
-import {validateVideoFile, naturalSort} from '@/utils/videoValidator';
+import {validateVideoFile, naturalSort, getFileExt, getBaseName} from '@/utils/videoValidator';
 import {calcTotalPoints} from '@/utils/pointsCalculator';
-import {fetchProjectInfo, fetchUserPoints, submitProjectTask} from '@/api/project'
+import {fetchProjectInfo, getOriginalUploadPolicy, uploadOriginalFile, submitProjectTask} from '@/api/project'
 
 export default {
   components: {AppTooltip, VideoUploadArea, VideoListPanel, VideoPreview, SubmitProgressModal},
@@ -124,6 +126,12 @@ export default {
   }),
   created() {
     this.loadProjectInfo()
+    this.restoreCachedVideos()
+  },
+  beforeDestroy() {
+    this.videos.forEach(video => {
+      if (video.objectUrl && video.objectUrl.startsWith('blob:')) URL.revokeObjectURL(video.objectUrl)
+    })
   },
   computed: {
     activeVideo() {
@@ -138,6 +146,18 @@ export default {
     }
   },
   methods: {
+    openVideoPicker() {
+      const picker = this.$refs.videoPicker
+      if (!picker) return
+      // 允许连续两次选择同一个文件时也触发 change。
+      picker.value = ''
+      picker.click()
+    },
+    handleVideoInput(event) {
+      const files = Array.from(event.target.files || [])
+      if (files.length) this.addVideos(files)
+      event.target.value = ''
+    },
     async loadProjectInfo() {
       try {
         const response = await fetchProjectInfo()
@@ -147,10 +167,83 @@ export default {
         console.error('获取项目配置失败', error)
       }
     },
-    openVideoPicker() {
-      this.$refs.videoPicker?.click()
+    async restoreCachedVideos() {
+      const api = window.electronAPI
+      if (!api?.getCachedVideos) return
+      try {
+        const cached = await api.getCachedVideos()
+        this.videos = await Promise.all(cached.map(async video => ({
+          ...video,
+          objectUrl: await this.createCachedObjectUrl(video),
+          file: null,
+          thumbnail: video.thumbnail || ''
+        })))
+        this.videos = this.videos.sort(naturalSort)
+        this.activeId = this.videos[0]?.id || ''
+      } catch (error) {
+        console.error('恢复视频缓存失败', error)
+      }
     },
-    addVideos(files) {
+    async createCachedObjectUrl(video) {
+      const api = window.electronAPI
+      if (!api?.readFileBytes || !video.path) return video.fileUrl || ''
+      const bytes = await api.readFileBytes(video.path)
+      const ext = getFileExt(video.name)
+      const mime = ext === 'webm' ? 'video/webm' : ext === 'mov' ? 'video/quicktime' : 'video/mp4'
+      return URL.createObjectURL(new Blob([bytes], {type: mime}))
+    },
+    readVideoDuration(objectUrl) {
+      return new Promise(resolve => {
+        const video = document.createElement('video')
+        video.preload = 'metadata'
+        video.src = objectUrl
+        video.onloadedmetadata = () => {
+          resolve(Number.isFinite(video.duration) ? video.duration : 0)
+          video.src = ''
+        }
+        video.onerror = () => resolve(0)
+      })
+    },
+    createThumbnail(file, objectUrl) {
+      return new Promise(resolve => {
+        const video = document.createElement('video')
+        video.preload = 'metadata'
+        video.muted = true
+        video.src = objectUrl
+        video.onloadedmetadata = () => {
+          video.currentTime = Math.min(1, video.duration || 0)
+        }
+        video.onseeked = () => {
+          const canvas = document.createElement('canvas')
+          canvas.width = video.videoWidth || 320
+          canvas.height = video.videoHeight || 180
+          canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height)
+          resolve(canvas.toDataURL('image/jpeg', 0.75))
+          video.src = ''
+        }
+        video.onerror = () => resolve('')
+      })
+    },
+    async cacheVideo(video) {
+      const api = window.electronAPI
+      if (!api?.cacheVideo || !video.file) return
+      try {
+        const sourcePath = api.getFilePath?.(video.file)
+        const cached = await api.cacheVideo({
+          id: video.id,
+          name: video.name,
+          size: video.size,
+          duration: video.duration,
+          sourcePath,
+          thumbnail: video.thumbnail
+        })
+        // 当前页面继续使用上传产生的 blob URL，避免 file:// 地址导致 video 无法加载。
+        this.$set(video, 'cachedPath', cached.path)
+      } catch (error) {
+        console.error('缓存视频失败', error)
+      }
+    },
+    async addVideos(files) {
       if (this.videos.length + files.length > MAX_VIDEO_COUNT) return alert('单次任务不能超过100个视频');
       const next = files.map((f, i) => {
         const e = validateVideoFile(f);
@@ -158,53 +251,147 @@ export default {
           alert(`${f.name}${e.join('，')}，请检查修改`);
           return null
         }
+        const objectUrl = URL.createObjectURL(f)
         return {
-          id: `${Date.now()}-${i}`,
+          id: `${Date.now()}-${i}-${Math.random().toString(36).slice(2, 8)}`,
           name: f.name,
           size: f.size,
           duration: f.duration || 0,
-          objectUrl: URL.createObjectURL(f),
+          objectUrl,
+          thumbnail: '',
           file: f
         }
       }).filter(Boolean);
       this.videos = [...this.videos, ...next].sort(naturalSort);
       if (!this.activeId) this.activeId = this.videos[0]?.id || ''
-    }, removeVideo(id) {
-      this.videos = this.videos.filter(v => v.id !== id);
+
+      await Promise.all(next.map(async video => {
+        if (!video.duration) {
+          video.duration = await this.readVideoDuration(video.objectUrl)
+        }
+        video.thumbnail = await this.createThumbnail(video.file, video.objectUrl)
+        await this.cacheVideo(video)
+      }))
+    },
+    async uploadFileWithPolicy(file, extension) {
+      const policy = await getOriginalUploadPolicy(extension)
+      return uploadOriginalFile(file, policy)
+    },
+    async splitVideo(video) {
+      const api = window.electronAPI
+      if (!api?.splitVideoAudio || !api?.readTempFile) {
+        throw new Error('当前应用不支持 FFmpeg 音视频拆分，请重新安装桌面客户端')
+      }
+      const sourcePath = video.file ? api.getFilePath?.(video.file) : video.path
+      if (!sourcePath) throw new Error(`无法读取视频文件：${video.name}`)
+      const paths = await api.splitVideoAudio({
+        sourcePath,
+        id: video.id,
+        extension: getFileExt(video.name)
+      })
+      const muteBytes = await api.readTempFile(paths.mutePath)
+      const audioBytes = await api.readTempFile(paths.audioPath)
+      const muteFile = new File([muteBytes], `video-mute.${getFileExt(video.name)}`, {type: video.file?.type || 'video/mp4'})
+      const audioFile = new File([audioBytes], `${getBaseName(video.name)}.mp3`, {type: 'audio/mpeg'})
+      return { paths, muteFile, audioFile }
+    },
+    async getUploadFile(video) {
+      if (video.file) return video.file
+      const response = await fetch(video.objectUrl)
+      const blob = await response.blob()
+      return new File([blob], video.name, {type: blob.type || 'video/*'})
+    },
+    getApiToken() {
+      return this.$store.state.user?.token || '91603f56-6f75-45fa-b8a8-ebf5e463f1f9'
+    },
+    async uploadVideo(video) {
+      const media = await this.splitVideo(video)
+      try {
+        const videoKey = await this.uploadFileWithPolicy(media.muteFile, getFileExt(video.name))
+        const audioKey = await this.uploadFileWithPolicy(media.audioFile, 'mp3')
+        return {
+          name: video.name,
+          videoMuteUrl: videoKey,
+          audioUrl: audioKey,
+          videoDuration: Math.floor(Number(video.duration) || 0),
+          videoSize: Math.floor((Number(video.size) || media.muteFile.size || 0) / (1024 * 1024)),
+          srtUrl: ''
+        }
+      } finally {
+        await window.electronAPI?.removeTempFiles?.([media.paths.mutePath, media.paths.audioPath])
+      }
+    },
+    async uploadSubtitle(video) {
+      const name = getBaseName(video.name).toLowerCase()
+      const subtitle = this.subtitleFiles.find(file => getBaseName(file.name).toLowerCase() === name)
+      if (!subtitle) return ''
+      return this.uploadFileWithPolicy(subtitle, getFileExt(subtitle.name))
+    },
+    async removeVideo(id) {
+      const video = this.videos.find(v => v.id === id)
+      // 优先更新界面，缓存清理失败不会影响用户删除列表中的视频。
+      this.videos = this.videos.filter(v => v.id !== id)
       this.activeId = this.videos[0]?.id || ''
-    }, openSubtitlePicker() {
+      if (video?.objectUrl?.startsWith('blob:')) URL.revokeObjectURL(video.objectUrl)
+      if (window.electronAPI?.removeCachedVideo) {
+        try {
+          await window.electronAPI.removeCachedVideo(id)
+        } catch (error) {
+          console.error('删除视频缓存失败', error)
+        }
+      }
+    },
+    openSubtitlePicker() {
       this.$refs.subtitleInput.click()
-    }, selectSubtitleFolder(e) {
+    },
+    selectSubtitleFolder(e) {
       this.subtitleFiles = [...e.target.files];
       this.subtitleFolder = this.subtitleFiles[0]?.webkitRelativePath?.split('/')[0] || '已选择字幕文件夹'
-    }, async submit() {
+    },
+    async submit() {
       if (!this.projectName) return alert('请输入项目名称');
       if (!this.sourceLanguage) return alert('请选择源语言');
       if (this.subtitleSource === 'upload' && !this.subtitleFiles.length) return alert('请选择字幕文件所在位置');
       try {
-        const r = await fetchUserPoints();
-        const points = Number(r?.points ?? r?.data?.points ?? this.$store.state.user?.points ?? 0);
-        if (points < this.totalPoints) return alert('您的积分不足，无法提交此任务');
+        // const r = await fetchUserPoints();
+        // const points = Number(r?.points ?? r?.data?.points ?? this.$store.state.user?.points ?? 0);
+        // if (points < this.totalPoints) return alert('您的积分不足，无法提交此任务');
+        const token = this.getApiToken()
         this.submitting = true;
+        this.status = 'active';
         this.step = 0;
-        await new Promise(r => setTimeout(r, 500));
-        this.step = 1;
-        await new Promise(r => setTimeout(r, 500));
-        this.step = 2;
+        const originalList = []
+        this.step = 1
+        for (const video of this.videos) {
+          const item = await this.uploadVideo(video, token)
+          if (this.subtitleSource === 'upload') item.srtUrl = await this.uploadSubtitle(video, token)
+          originalList.push(item)
+        }
+
+        this.step = 2
+        const region = this.region || {}
         await submitProjectTask({
-          projectName: this.projectName,
-          sourceLanguage: this.sourceLanguage,
-          subtitleSource: this.subtitleSource,
-          videos: this.videos.map(v => ({name: v.name, duration: v.duration})),
-          roleRecognition: this.roleRecognition,
-          vocalSeparation: this.vocalSeparation,
-          subtitleErase: this.subtitleErase,
-          region: this.region
-        });
+          name: this.projectName,
+          langCode: this.sourceLanguage,
+          subtitleType: {asr: 1, ocr: 2, upload: 3}[this.subtitleSource],
+          roleType: this.roleRecognition ? 1 : 0,
+          separateType: this.vocalSeparation ? 1 : 0,
+          eraseType: this.subtitleErase ? 1 : 0,
+          originalListStr: JSON.stringify(originalList),
+          ...(this.subtitleErase ? {
+            eraseLocationStr: JSON.stringify({
+              top_left_x: region.x,
+              top_left_y: region.y,
+              bottom_right_x: region.x + region.w,
+              bottom_right_y: region.y + region.h
+            })
+          } : {})
+        }, token)
         this.status = 'done';
         setTimeout(() => this.$router.push({name: 'home'}), 700)
       } catch (e) {
         this.submitting = false;
+        this.status = 'active';
         alert(e.message || '提交失败，请稍后重试')
       }
     }

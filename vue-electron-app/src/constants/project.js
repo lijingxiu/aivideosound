@@ -10,7 +10,7 @@ export const SUBTITLE_SOURCES = [
     value: 'asr',
     label: '语音识别',
     tag: '推荐',
-    tooltip: '10积分/分钟，ASR语音内容识别，适合有声音的视频'
+    tooltip: '10积分/分钟，按每30秒5积分计算，适合有声音的视频'
   },
   {
     value: 'ocr',
