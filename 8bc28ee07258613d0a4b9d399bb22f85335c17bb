@@ -1,0 +1,246 @@
+vue-electron-app/src/views/NewProjectView.vue
+  f8d470643f397b27 155,339-357,386-387,404,470-471,493,899
+  2b4b4ef21c4664de 78-79,109-130,132-141,143,428-433,437-438,888-898,900-965
+  f52aa1988b2bb04a 38,75-77,80-96,131,142,170-173,200-208,421-425,434-436,439-454,699-840
+vue-electron-app/src/components/layout/AppLayout.vue
+  2b17653fa4e453ce 96,99,251,308
+vue-electron-app/src/views/HomeView.vue
+  3177d7bdeebeae1f 55,119,198,200-205
+  1da5598d3804cfbc 179,181-186
+  9c03a3a20508a425 37-38,40-41,44,46-47,51-52,81,92-96,106-109,113-118,121,126-131,135-136,138-139,171-178,180,187-197,199,209-211,213-220
+  b68bb5c8d1c7196f 58
+  eb38a975d5239094 59-67,90,110,132-134,137,140-141,143-170,371-375,398-432
+vue-electron-app/src/api/project.js
+  f8d470643f397b27 5-8,10,42-47
+  fd570942b127fd39 23-33
+  eb38a975d5239094 52-58
+  04e6264c09140684 35-39
+  9c03a3a20508a425 13-20
+vue-electron-app/src/assets/styles/global.scss
+  eb38a975d5239094 126-146
+vue-electron-app/out/preload/index.js
+  f8d470643f397b27 16-17
+vue-electron-app/src/views/ProjectDetailView.vue
+  d6da76a5d1f88a9b 4-8,10-28,31-32,34-139,144,150-164,166-179,183-306,430-432,434-606,608-938
+  04e6264c09140684 29-30,33,141,147-149,165,180-182,307-429
+vue-electron-app/out/main/main.js
+  f8d470643f397b27 3,6-7,28-87
+vue-electron-app/src/utils/pointsCalculator.js
+  9c03a3a20508a425 36-39
+vue-electron-app/src/views/QuickVideoTranslateView.vue
+  2b17653fa4e453ce 1-190
+vue-electron-app/src/router/index.js
+  2b17653fa4e453ce 17-28
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "bzl_git_version": "0.1.37",
+  "base_commit_sha": "8bc28ee07258613d0a4b9d399bb22f85335c17bb",
+  "prompts": {
+    "04e6264c09140684": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "40906686-cebb-4698-b9d1-2ad986decc8a",
+        "model": "gpt-5.6-terra-medium",
+        "ide": "cursor"
+      },
+      "human_author": "liqiang",
+      "total_additions": 4532,
+      "total_deletions": 0,
+      "accepted_lines": 139,
+      "overriden_lines": 0
+    },
+    "1abb899caba7f23a": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "ea2437d3-9436-4c4c-bdd8-62b7689f7ed9",
+        "model": "composer-2.5-fast",
+        "ide": "cursor"
+      },
+      "human_author": "liqiang",
+      "transcript_path": "/Users/administrator/.cursor/projects/Users-administrator-code-aivideosound-vue-electron-app/agent-transcripts/ea2437d3-9436-4c4c-bdd8-62b7689f7ed9/ea2437d3-9436-4c4c-bdd8-62b7689f7ed9.jsonl",
+      "total_additions": 2352,
+      "total_deletions": 0,
+      "accepted_lines": 0,
+      "overriden_lines": 0
+    },
+    "1da5598d3804cfbc": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "e7168f8d-31e1-4b07-b180-8e614c2b90f7",
+        "model": "composer-2.5-fast",
+        "ide": "cursor"
+      },
+      "human_author": "liqiang",
+      "total_additions": 404,
+      "total_deletions": 0,
+      "accepted_lines": 7,
+      "overriden_lines": 0
+    },
+    "2b17653fa4e453ce": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "ada2e98a-7303-45ae-9019-820e141a5762",
+        "model": "gpt-5.6-terra-medium",
+        "ide": "cursor"
+      },
+      "human_author": "liqiang",
+      "total_additions": 2258,
+      "total_deletions": 0,
+      "accepted_lines": 206,
+      "overriden_lines": 0
+    },
+    "2b4b4ef21c4664de": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "87fd8eeb-cc05-463d-a654-7d93a0ff0167",
+        "model": "composer-2.5-fast",
+        "ide": "cursor"
+      },
+      "human_author": "liqiang",
+      "transcript_path": "/Users/administrator/.cursor/projects/Users-administrator-code-aivideosound-vue-electron-app/agent-transcripts/87fd8eeb-cc05-463d-a654-7d93a0ff0167/87fd8eeb-cc05-463d-a654-7d93a0ff0167.jsonl",
+      "total_additions": 10619,
+      "total_deletions": 0,
+      "accepted_lines": 120,
+      "overriden_lines": 0
+    },
+    "2c19f11759dfcc54": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "594e2517-fc10-4d5d-8d5f-73eb71574da5",
+        "model": "gpt-5.6-terra-medium",
+        "ide": "cursor"
+      },
+      "human_author": "liqiang",
+      "transcript_path": "/Users/administrator/.cursor/projects/Users-administrator-code-aivideosound-vue-electron-app/agent-transcripts/594e2517-fc10-4d5d-8d5f-73eb71574da5/594e2517-fc10-4d5d-8d5f-73eb71574da5.jsonl",
+      "total_additions": 1604,
+      "total_deletions": 0,
+      "accepted_lines": 0,
+      "overriden_lines": 0
+    },
+    "3177d7bdeebeae1f": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "3c26f892-7bb6-4e6c-80d9-c3a74ab4aca1",
+        "model": "gpt-5.6-terra-medium",
+        "ide": "cursor"
+      },
+      "human_author": "liqiang",
+      "transcript_path": "/Users/administrator/.cursor/projects/Users-administrator-code-aivideosound-vue-electron-app/agent-transcripts/3c26f892-7bb6-4e6c-80d9-c3a74ab4aca1/3c26f892-7bb6-4e6c-80d9-c3a74ab4aca1.jsonl",
+      "total_additions": 2871,
+      "total_deletions": 0,
+      "accepted_lines": 9,
+      "overriden_lines": 0
+    },
+    "9c03a3a20508a425": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "8c3bfeef-7f7e-4569-8f13-3dae0a5c79f2",
+        "model": "gpt-5.6-terra-medium",
+        "ide": "cursor"
+      },
+      "human_author": "liqiang",
+      "total_additions": 4193,
+      "total_deletions": 3,
+      "accepted_lines": 80,
+      "overriden_lines": 0
+    },
+    "b68bb5c8d1c7196f": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "594e2517-fc10-4d5d-8d5f-73eb71574da5",
+        "model": "cursor-grok-4.6-high-fast",
+        "ide": "cursor"
+      },
+      "human_author": "liqiang",
+      "transcript_path": "/Users/administrator/.cursor/projects/Users-administrator-code-aivideosound-vue-electron-app/agent-transcripts/594e2517-fc10-4d5d-8d5f-73eb71574da5/594e2517-fc10-4d5d-8d5f-73eb71574da5.jsonl",
+      "total_additions": 5163,
+      "total_deletions": 0,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    },
+    "d6da76a5d1f88a9b": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "5a90e846-bfe3-473c-8986-3485beeee166",
+        "model": "gpt-5.6-terra-medium",
+        "ide": "cursor"
+      },
+      "human_author": "liqiang",
+      "transcript_path": "/Users/administrator/.cursor/projects/Users-administrator-code-aivideosound-vue-electron-app/agent-transcripts/5a90e846-bfe3-473c-8986-3485beeee166/5a90e846-bfe3-473c-8986-3485beeee166.jsonl",
+      "total_additions": 4842,
+      "total_deletions": 0,
+      "accepted_lines": 793,
+      "overriden_lines": 1
+    },
+    "eb38a975d5239094": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "018d4ebe-17a3-4595-bef6-884f93653d81",
+        "model": "composer-2.5-fast",
+        "ide": "cursor"
+      },
+      "human_author": "liqiang",
+      "transcript_path": "/Users/administrator/.cursor/projects/Users-administrator-code-aivideosound-vue-electron-app/agent-transcripts/018d4ebe-17a3-4595-bef6-884f93653d81/018d4ebe-17a3-4595-bef6-884f93653d81.jsonl",
+      "total_additions": 3924,
+      "total_deletions": 0,
+      "accepted_lines": 113,
+      "overriden_lines": 0
+    },
+    "f5070ae7347de0d8": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "f6231c27-01a6-4091-86d0-0e49568e9a0b",
+        "model": "cursor-grok-4.6-high-fast",
+        "ide": "cursor"
+      },
+      "human_author": "liqiang",
+      "total_additions": 807,
+      "total_deletions": 0,
+      "accepted_lines": 0,
+      "overriden_lines": 0
+    },
+    "f52aa1988b2bb04a": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "87fd8eeb-cc05-463d-a654-7d93a0ff0167",
+        "model": "gpt-5.6-terra-medium",
+        "ide": "cursor"
+      },
+      "human_author": "liqiang",
+      "transcript_path": "/Users/administrator/.cursor/projects/Users-administrator-code-aivideosound-vue-electron-app/agent-transcripts/87fd8eeb-cc05-463d-a654-7d93a0ff0167/87fd8eeb-cc05-463d-a654-7d93a0ff0167.jsonl",
+      "total_additions": 5198,
+      "total_deletions": 0,
+      "accepted_lines": 202,
+      "overriden_lines": 0
+    },
+    "f8d470643f397b27": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "c88f6097-159c-4044-80fd-0f132725041c",
+        "model": "gpt-5.6-terra",
+        "ide": "cursor"
+      },
+      "human_author": "liqiang",
+      "transcript_path": "/Users/administrator/.cursor/projects/Users-administrator-code-aivideosound-vue-electron-app/agent-transcripts/c88f6097-159c-4044-80fd-0f132725041c/c88f6097-159c-4044-80fd-0f132725041c.jsonl",
+      "total_additions": 23,
+      "total_deletions": 15,
+      "accepted_lines": 103,
+      "overriden_lines": 0
+    },
+    "fd570942b127fd39": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "b573b31d-8a58-4857-900d-cf2fd875fc6e",
+        "model": "gpt-5.6-terra-medium",
+        "ide": "cursor"
+      },
+      "human_author": "liqiang",
+      "transcript_path": "/Users/administrator/.cursor/projects/Users-administrator-code-aivideosound-vue-electron-app/agent-transcripts/b573b31d-8a58-4857-900d-cf2fd875fc6e/b573b31d-8a58-4857-900d-cf2fd875fc6e.jsonl",
+      "total_additions": 1144,
+      "total_deletions": 0,
+      "accepted_lines": 11,
+      "overriden_lines": 0
+    }
+  }
+}
