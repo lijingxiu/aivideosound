@@ -123,6 +123,27 @@ ol {
   list-style: none;
 }
 
+// MessageBox 确认弹窗按钮统一主题色
+.el-message-box__btns .el-button--primary {
+  background-color: #ed6200;
+  border-color: #ed6200;
+  color: #fff;
+}
+
+.el-message-box__btns .el-button--primary:hover,
+.el-message-box__btns .el-button--primary:focus {
+  background-color: #ff7a00;
+  border-color: #ff7a00;
+  color: #fff;
+}
+
+.el-message-box__btns .el-button--default:hover,
+.el-message-box__btns .el-button--default:focus {
+  border-color: #ff7a00;
+  color: #ed6200;
+  background-color: #fff3e6;
+}
+
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;

@@ -1,8 +1,10 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
 const { join, extname } = require('path');
-const { existsSync, mkdirSync, readFileSync, writeFileSync, copyFile, unlink, rmSync } = require('fs');
+const { existsSync, mkdirSync, readFileSync, writeFileSync, copyFile, unlink, rmSync, statSync, createReadStream } = require('fs');
 const { spawn } = require('child_process');
 const ffmpegPath = require('ffmpeg-static');
+const https = require('https');
+const http = require('http');
 const { pathToFileURL } = require('url');
 
 const cacheDir = () => join(app.getPath('userData'), 'video-cache');
@@ -22,6 +24,66 @@ function saveCacheIndex(items) {
     mkdirSync(cacheDir(), { recursive: true });
     writeFileSync(cacheIndex(), JSON.stringify(items, null, 2), 'utf8');
 }
+
+function uploadFileToOss({ host, policy, filePath, fileName }) {
+    return new Promise((resolve, reject) => {
+        if (!filePath || !existsSync(filePath)) return reject(new Error('找不到待上传文件'));
+        const target = new URL(host);
+        const boundary = `----QianyinBoundary${Date.now().toString(16)}`;
+        const fields = {
+            key: policy.fileKey,
+            policy: policy.policy,
+            'x-oss-signature': policy.signature,
+            'x-oss-date': policy.xOssDate,
+            'x-oss-credential': policy.xOssCredential,
+            'x-oss-signature-version': policy.xOssSignatureVersion,
+            'success_action_status': '200'
+        };
+        if (policy.securityToken) fields['x-oss-security-token'] = policy.securityToken;
+        const prefix = Object.entries(fields).map(([key, value]) =>
+            `--${boundary}\r\nContent-Disposition: form-data; name="${key}"\r\n\r\n${value}\r\n`
+        ).join('');
+        const fileStat = statSync(filePath);
+        const filePart = `--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="${String(fileName || 'file').replace(/["\\]/g, '_')}"\r\nContent-Type: application/octet-stream\r\n\r\n`;
+        const suffix = `\r\n--${boundary}--\r\n`;
+        const prefixBuffer = Buffer.from(prefix);
+        const filePartBuffer = Buffer.from(filePart);
+        const suffixBuffer = Buffer.from(suffix);
+        const transport = target.protocol === 'http:' ? http : https;
+        const req = transport.request({
+            method: 'POST',
+            hostname: target.hostname,
+            port: target.port || (target.protocol === 'http:' ? 80 : 443),
+            path: `${target.pathname}${target.search}`,
+            headers: {
+                'Content-Type': `multipart/form-data; boundary=${boundary}`,
+                'Content-Length': prefixBuffer.length + filePartBuffer.length + fileStat.size + suffixBuffer.length
+            }
+        }, response => {
+            let body = '';
+            response.setEncoding('utf8');
+            response.on('data', chunk => { body += chunk; });
+            response.on('end', () => {
+                const result = {
+                    status: response.statusCode,
+                    headers: response.headers,
+                    body
+                };
+                if (response.statusCode >= 200 && response.statusCode < 300) resolve(result);
+                else reject(new Error(`OSS 上传失败 (${response.statusCode}): ${body.slice(0, 300)}`));
+            });
+        });
+        req.on('error', reject);
+        req.write(prefixBuffer);
+        req.write(filePartBuffer);
+        const stream = createReadStream(filePath);
+        stream.on('error', error => req.destroy(error));
+        stream.on('end', () => req.end(suffixBuffer));
+        stream.pipe(req, { end: false });
+    });
+}
+
+ipcMain.handle('upload-oss-file', (_event, payload) => uploadFileToOss(payload));
 
 function createWindow() {
     const mainWindow = new BrowserWindow({

@@ -13,5 +13,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
     splitVideoAudio: (data) => ipcRenderer.invoke('split-video-audio', data),
     readTempFile: (filePath) => ipcRenderer.invoke('read-temp-file', filePath),
     readFileBytes: (filePath) => ipcRenderer.invoke('read-file-bytes', filePath),
-    removeTempFiles: (paths) => ipcRenderer.invoke('remove-temp-files', paths)
+    removeTempFiles: (paths) => ipcRenderer.invoke('remove-temp-files', paths),
+    uploadOssFile: (data) => ipcRenderer.invoke('upload-oss-file', data)
 })

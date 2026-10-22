@@ -14,6 +14,18 @@ const routes = [
   {
     path: '/',
     name: 'home',
+    redirect: { name: 'quick-video-translate' },
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/quick-video-translate',
+    name: 'quick-video-translate',
+    component: () => import('../views/QuickVideoTranslateView.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/video-translate',
+    name: 'video-translate',
     component: () => import('../views/HomeView.vue'),
     meta: { requiresAuth: true }
   },

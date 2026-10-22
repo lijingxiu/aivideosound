@@ -93,10 +93,10 @@ export default {
   components: { AppLogo, AppIcon },
   data() {
     return {
-      activeMenu: 'video-translate',
+      activeMenu: 'quick-video-translate',
       expanded: { scenarios: true, tools: true },
       scenarioMenus: [
-        { key: 'video-translate', label: '视频译制', icon: 'video' }
+        { key: 'quick-video-translate', label: '极速视频翻译', icon: 'video' }
       ],
       toolMenus: [
         { key: 'subtitle-erase', label: '字幕与水印擦除', icon: 'erase' },
@@ -248,7 +248,7 @@ $border: #eee;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 32px;
+  padding: 20px 32px 15px;
   border-bottom: 1px solid $border;
   flex-shrink: 0;
 
@@ -305,6 +305,6 @@ $border: #eee;
 .main-content {
   flex: 1;
   overflow: auto;
-  padding: 24px 32px;
+  padding: 10px 28px;
 }
 </style>

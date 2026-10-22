@@ -33,7 +33,8 @@ function calcPointsByUnits(units, settings) {
 }
 
 export function calcTotalPoints(videos, settings) {
-  // 多个视频先合并总时长，再统一计算 30 秒计费单位。
-  const totalDuration = videos.reduce((sum, video) => sum + (Number(video.duration) || 0), 0)
-  return calcPointsByUnits(durationToUnits(totalDuration), settings)
+  // 每个视频独立计算计费单位，再累加，视频之间不合并时长。
+  return videos.reduce((sum, video) => {
+    return sum + calcVideoPoints(video, settings)
+  }, 0)
 }

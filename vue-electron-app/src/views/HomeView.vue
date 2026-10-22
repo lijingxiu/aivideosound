@@ -34,33 +34,37 @@
                   <a href="#" class="project-name__link">{{ project.name }}</a>
                 </div>
               </td>
-              <td>{{ project.sourceLang }}</td>
-              <td>{{ project.materialCount }}</td>
+              <td>{{ project.langName || '-' }}</td>
+              <td>{{ project.videoNum ?? 0 }}</td>
               <td>
-                <span class="status-tag" :class="project.vocalSeparation ? 'status-tag--on' : 'status-tag--off'">
-                  {{ project.vocalSeparation ? '开启' : '关闭' }}
+                <span class="status-tag" :class="project.separateType === 1 ? 'status-tag--on' : 'status-tag--off'">
+                  {{ project.separateType === 1 ? '开启' : '关闭' }}
                 </span>
               </td>
-              <td>{{ project.subtitleSource }}</td>
+              <td>{{ subtitleSourceName(project.subtitleType) }}</td>
               <td>
-                <span class="status-tag" :class="project.characterRecognition ? 'status-tag--on' : 'status-tag--off'">
-                  {{ project.characterRecognition ? '开启' : '关闭' }}
+                <span class="status-tag" :class="project.roleType === 1 ? 'status-tag--on' : 'status-tag--off'">
+                  {{ project.roleType === 1 ? '开启' : '关闭' }}
                 </span>
               </td>
               <td>
-                <span class="status-tag" :class="project.subtitleErase ? 'status-tag--on' : 'status-tag--off'">
-                  {{ project.subtitleErase ? '开启' : '关闭' }}
+                <span class="status-tag" :class="project.eraseType === 1 ? 'status-tag--on' : 'status-tag--off'">
+                  {{ project.eraseType === 1 ? '开启' : '关闭' }}
                 </span>
               </td>
-              <td>{{ project.validDays }}天</td>
-              <td class="cell-remark">{{ project.remark || '-' }}</td>
-              <td class="cell-time">{{ project.createdAt }}</td>
+              <td>{{ formatRemainDays(project.expireTime) }}</td>
               <td>
                 <div class="cell-actions">
-                  <a href="#" class="action-enter" @click.prevent="$router.push({ name: 'project-detail', params: { id: project.id } })">进入</a>
-                  <button class="action-more">
-                    <AppIcon name="more" :size="16" color="#999" />
-                  </button>
+                  <a href="#" class="action-enter" @click.prevent="$router.push({ name: 'project-detail', params: { id: project.id }, query: { name: project.name, expireTime: project.expireTime } })">进入</a>
+                  <div class="more-wrap">
+                    <button class="action-more" @click.stop="toggleMenu(project.id)">
+                      <AppIcon name="more" :size="16" color="#999" />
+                    </button>
+                    <div v-show="openMenuId === project.id" class="more-popover" @click.stop>
+                      <button class="more-popover__item" @click="handleEdit(project)">编辑</button>
+                      <button class="more-popover__item more-popover__item--danger" @click="handleDelete(project)">删除</button>
+                    </div>
+                  </div>
                 </div>
               </td>
             </tr>
@@ -74,7 +78,7 @@
       <div class="pagination">
         <button class="pagination__btn" :disabled="currentPage <= 1" @click="currentPage--">-</button>
         <span class="pagination__current">{{ currentPage }}</span>
-        <button class="pagination__btn" :disabled="currentPage >= totalPages" @click="currentPage++">+</button>
+        <button class="pagination__btn" :disabled="!hasNextPage || loading" @click="currentPage++">+</button>
       </div>
     </div>
   </AppLayout>
@@ -83,48 +87,13 @@
 <script>
 import AppLayout from '@/components/layout/AppLayout.vue'
 import AppIcon from '@/components/common/AppIcon.vue'
+import { fetchProjectList, deleteProject } from '@/api/project'
 
-const MOCK_PROJECTS = [
-  {
-    id: 1,
-    name: '古装',
-    sourceLang: '中文',
-    materialCount: 12,
-    vocalSeparation: true,
-    subtitleSource: '语音识别',
-    characterRecognition: true,
-    subtitleErase: false,
-    validDays: 27,
-    remark: '',
-    createdAt: '2026-10-32 12:22'
-  },
-  {
-    id: 2,
-    name: 'XXXX',
-    sourceLang: 'English',
-    materialCount: 5,
-    vocalSeparation: false,
-    subtitleSource: '画面识别',
-    characterRecognition: false,
-    subtitleErase: true,
-    validDays: 15,
-    remark: '测试项目',
-    createdAt: '2026-10-28 09:15'
-  },
-  {
-    id: 3,
-    name: '纪录片系列',
-    sourceLang: '中文',
-    materialCount: 28,
-    vocalSeparation: true,
-    subtitleSource: '上传字幕',
-    characterRecognition: true,
-    subtitleErase: true,
-    validDays: 45,
-    remark: '多语言版本',
-    createdAt: '2026-10-20 16:40'
-  }
-]
+const SUBTITLE_SOURCE_NAMES = {
+  1: '语音识别',
+  2: '画面识别',
+  3: '上传字幕'
+}
 
 export default {
   name: 'HomeView',
@@ -134,42 +103,121 @@ export default {
       searchKeyword: '',
       currentPage: 1,
       pageSize: 10,
+      projects: [],
+      hasNextPage: false,
+      loading: false,
+      searchTimer: null,
+      openMenuId: null,
       columns: [
         { key: 'name', label: '项目名称', width: '140px' },
-        { key: 'sourceLang', label: '源语言', width: '80px' },
-        { key: 'materialCount', label: '素材数量', width: '80px' },
-        { key: 'vocalSeparation', label: '人声背景音分离', width: '120px' },
-        { key: 'subtitleSource', label: '字幕来源', width: '100px' },
-        { key: 'characterRecognition', label: '角色识别', width: '80px' },
-        { key: 'subtitleErase', label: '字幕擦除', width: '80px' },
-        { key: 'validDays', label: '有效期剩余', width: '90px' },
-        { key: 'remark', label: '备注', width: '100px' },
-        { key: 'createdAt', label: '创建时间', width: '140px' },
+        { key: 'langName', label: '源语言', width: '80px' },
+        { key: 'videoNum', label: '素材数量', width: '80px' },
+        { key: 'separateType', label: '人声背景音分离', width: '120px' },
+        { key: 'subtitleType', label: '字幕来源', width: '100px' },
+        { key: 'roleType', label: '角色识别', width: '80px' },
+        { key: 'eraseType', label: '字幕擦除', width: '80px' },
+        { key: 'validDays', label: '有效期剩余', width: '140px' },
         { key: 'actions', label: '操作', width: '90px' }
-      ],
-      projects: MOCK_PROJECTS
+      ]
     }
   },
   computed: {
     filteredProjects() {
-      const kw = this.searchKeyword.trim().toLowerCase()
-      const list = kw
-        ? this.projects.filter(p => p.name.toLowerCase().includes(kw))
-        : this.projects
-      const start = (this.currentPage - 1) * this.pageSize
-      return list.slice(start, start + this.pageSize)
+      return this.projects
+    }
+  },
+  created() {
+    this.loadProjects()
+  },
+  mounted() {
+    document.addEventListener('click', this.closeMenu)
+  },
+  beforeDestroy() {
+    clearTimeout(this.searchTimer)
+    document.removeEventListener('click', this.closeMenu)
+  },
+  methods: {
+    toggleMenu(id) {
+      this.openMenuId = this.openMenuId === id ? null : id
     },
-    totalPages() {
-      const kw = this.searchKeyword.trim().toLowerCase()
-      const total = kw
-        ? this.projects.filter(p => p.name.toLowerCase().includes(kw)).length
-        : this.projects.length
-      return Math.max(1, Math.ceil(total / this.pageSize))
+    closeMenu() {
+      this.openMenuId = null
+    },
+    handleEdit(project) {
+      this.openMenuId = null
+      this.$router.push({ name: 'new-project', query: { id: project.id } })
+    },
+    handleDelete(project) {
+      this.openMenuId = null
+      this.$confirm(`确定删除项目「${project.name}」吗？删除后不可恢复。`, '删除确认', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }).then(async () => {
+        await deleteProject(project.id)
+        this.$message.success('删除成功')
+        if (this.projects.length === 1 && this.currentPage > 1) {
+          this.currentPage--
+        } else {
+          this.projects = this.projects.filter(p => p.id !== project.id)
+          this.loadProjects()
+        }
+      }).catch(err => {
+        if (err === 'cancel' || err === 'close') return
+        console.error('删除项目失败', err)
+        this.$message.error('删除失败，请稍后重试')
+      })
+    },
+    async loadProjects() {
+      this.loading = true
+      try {
+        const response = await fetchProjectList({
+          pageOffset: this.currentPage - 1,
+          pageLimit: this.pageSize,
+          name: this.searchKeyword.trim()
+        })
+        const list = response?.data?.data?.list || response?.data?.list || response?.list || []
+        this.projects = list
+        const recordCount = response?.data?.page?.recordCount ?? response?.page?.recordCount
+        if (typeof recordCount === 'number') {
+          this.hasNextPage = this.currentPage * this.pageSize < recordCount
+        } else {
+          this.hasNextPage = list.length === this.pageSize
+        }
+      } catch (error) {
+        this.projects = []
+        this.hasNextPage = false
+        console.error('获取项目列表失败', error)
+      } finally {
+        this.loading = false
+      }
+    },
+    subtitleSourceName(type) {
+      return SUBTITLE_SOURCE_NAMES[type] || '-'
+    },
+    formatRemainDays(value) {
+      if (!value) return '-'
+      const expire = new Date(value)
+      if (Number.isNaN(expire.getTime())) return '-'
+      const diffDays = Math.ceil((expire.getTime() - Date.now()) / (24 * 60 * 60 * 1000))
+      if (diffDays < 0) return '已过期'
+      if (diffDays === 0) return '今天到期'
+      return `剩余 ${diffDays} 天`
     }
   },
   watch: {
+    currentPage() {
+      this.loadProjects()
+    },
     searchKeyword() {
-      this.currentPage = 1
+      clearTimeout(this.searchTimer)
+      this.searchTimer = setTimeout(() => {
+        if (this.currentPage === 1) {
+          this.loadProjects()
+        } else {
+          this.currentPage = 1
+        }
+      }, 300)
     }
   }
 }
@@ -311,12 +359,6 @@ $border: #eee;
   }
 }
 
-.cell-remark {
-  max-width: 120px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
 .cell-time {
   color: #666;
   font-size: 12px;
@@ -326,6 +368,11 @@ $border: #eee;
   display: flex;
   align-items: center;
   gap: 8px;
+  overflow: visible;
+}
+
+.more-wrap {
+  position: relative;
 }
 
 .action-enter {
@@ -345,6 +392,41 @@ $border: #eee;
 
   &:hover {
     background: #f0f0f0;
+  }
+}
+
+.more-popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 20;
+  min-width: 96px;
+  padding: 4px;
+  background: #fff;
+  border: 1px solid $border;
+  border-radius: 6px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+
+  &__item {
+    display: block;
+    width: 100%;
+    padding: 8px 12px;
+    text-align: left;
+    font-size: 13px;
+    color: #333;
+    border-radius: 4px;
+
+    &:hover {
+      background: #f5f5f5;
+    }
+
+    &--danger {
+      color: #ff4d4f;
+
+      &:hover {
+        background: #fff1f0;
+      }
+    }
   }
 }
 

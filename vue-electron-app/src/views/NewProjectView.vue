@@ -35,7 +35,7 @@
                   <span>{{ s.label }}<small v-if="s.tag">（{{ s.tag }}）</small></span>
                 </el-tooltip>
               </span>
-              <div v-if="subtitleSource === 'asr' || subtitleSource === 'ocr'">
+              <div class="segment-settings">
                 <div class="segment-setting-row">
                   <span>角色识别
                     <el-tooltip
@@ -70,14 +70,30 @@
                   <el-tooltip content="200积分/分钟，自动识别字幕内容并智能擦除，恢复原视频内容" placement="top">
                     <el-switch v-model="subtitleErase" active-color="#ed6200" inactive-color="#d9d9d9"/>
                   </el-tooltip>
-
                 </div>
               </div>
-              <div v-if="subtitleSource === 'upload'" class="subtitle-folder" @click="openSubtitlePicker">
-                <input
-                  ref="subtitleInput" type="file" webkitdirectory directory multiple hidden
-                  @change="selectSubtitleFolder"><strong>请选择<span>字幕文件所在位置</span></strong>
-                <p>{{ subtitleFolder || '系统会自动匹配与视频文件同名的srt字幕文件' }}</p></div>
+              <div v-if="subtitleSource === 'upload'" class="subtitle-upload-panel">
+                <div class="subtitle-folder" @click="openSubtitlePicker">
+                  <input
+                    ref="subtitleInput" type="file" multiple hidden accept=".srt"
+                    @change="selectSubtitleFolder"><strong>请选择<span>字幕文件</span>（可多选，仅支持 srt）</strong>
+                  <p>{{ subtitleFolder || '系统会自动匹配与视频文件同名的srt字幕文件' }}</p>
+                </div>
+                <div v-if="subtitleFiles.length" class="subtitle-selection">
+                  <div class="subtitle-selection__head">
+                    <span>已选择字幕（{{ subtitleFiles.length }}）</span>
+                    <button type="button" class="text-button" @click="showSubtitleMatches">查看匹配列表</button>
+                  </div>
+                  <div class="subtitle-file-list">
+                    <button v-for="file in subtitleFiles" :key="file.name + file.size" type="button"
+                            class="subtitle-file" :class="{ 'subtitle-file--active': selectedSubtitleName === file.name }"
+                            @click="previewSubtitle(file)">
+                      <span class="subtitle-file__name">{{ file.name }}</span>
+                      <span class="subtitle-file__action">查看</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
 
 
             </el-tab-pane>
@@ -90,6 +106,41 @@
       </section>
     </div>
     <SubmitProgressModal :visible="submitting" :current-step="step" :step-status="status"/>
+    <div v-if="subtitleMatchVisible" class="custom-modal-mask" @click.self="subtitleMatchVisible = false">
+      <div class="custom-modal">
+        <div class="custom-modal-head">
+          <span>字幕匹配列表</span>
+          <button type="button" class="custom-modal-close" @click="subtitleMatchVisible = false">✕</button>
+        </div>
+        <div class="custom-modal-body">
+          <div class="match-summary">已按照“字幕文件名与视频文件名（不含扩展名）相同”的规则进行匹配</div>
+          <div class="match-list">
+            <div v-for="item in subtitleMatchList" :key="item.video.id" class="match-row">
+              <span class="match-video" :title="item.video.name">{{ item.video.name }}</span>
+              <span v-if="item.subtitle" class="match-subtitle" :title="item.subtitle.name">{{ item.subtitle.name }}</span>
+              <span v-else class="match-missing">未找到同名字幕</span>
+              <button v-if="item.subtitle" type="button" class="text-button" @click="previewSubtitle(item.subtitle)">查看</button>
+            </div>
+            <div v-if="!subtitleMatchList.length" class="empty-match">请先上传视频</div>
+          </div>
+        </div>
+        <div class="custom-modal-foot">
+          <span class="match-count">已匹配 {{ matchedSubtitleCount }}/{{ videos.length }} 个视频</span>
+          <el-button @click="subtitleMatchVisible = false">关闭</el-button>
+        </div>
+      </div>
+    </div>
+    <div v-if="subtitlePreviewVisible" class="custom-modal-mask custom-modal-mask--inner" @click.self="subtitlePreviewVisible = false">
+      <div class="custom-modal">
+        <div class="custom-modal-head">
+          <span>{{ selectedSubtitleName || '字幕预览' }}</span>
+          <button type="button" class="custom-modal-close" @click="subtitlePreviewVisible = false">✕</button>
+        </div>
+        <div class="custom-modal-body">
+          <pre class="subtitle-preview">{{ selectedSubtitleContent || '暂无字幕内容' }}</pre>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 <script>
@@ -101,7 +152,7 @@ import SubmitProgressModal from '@/components/project/SubmitProgressModal.vue';
 import {SUBTITLE_SOURCES, MAX_VIDEO_COUNT} from '@/constants/project';
 import {validateVideoFile, naturalSort, getFileExt, getBaseName} from '@/utils/videoValidator';
 import {calcTotalPoints} from '@/utils/pointsCalculator';
-import {fetchProjectInfo, getOriginalUploadPolicy, uploadOriginalFile, submitProjectTask} from '@/api/project'
+import {fetchProjectInfo, getOriginalUploadPolicy, submitProjectTask} from '@/api/project'
 
 export default {
   components: {AppTooltip, VideoUploadArea, VideoListPanel, VideoPreview, SubmitProgressModal},
@@ -116,6 +167,10 @@ export default {
     activeId: '',
     subtitleFolder: '',
     subtitleFiles: [],
+    selectedSubtitleName: '',
+    selectedSubtitleContent: '',
+    subtitleMatchVisible: false,
+    subtitlePreviewVisible: false,
     region: {x: .1, y: .65, w: .8, h: .2},
     submitting: false,
     step: 0,
@@ -126,7 +181,6 @@ export default {
   }),
   created() {
     this.loadProjectInfo()
-    this.restoreCachedVideos()
   },
   beforeDestroy() {
     this.videos.forEach(video => {
@@ -143,6 +197,15 @@ export default {
         vocalSeparation: this.vocalSeparation,
         subtitleErase: this.subtitleErase
       })
+    },
+    subtitleMatchList() {
+      return this.videos.map(video => ({
+        video,
+        subtitle: this.subtitleFiles.find(file => getBaseName(file.name).toLowerCase() === getBaseName(video.name).toLowerCase())
+      }))
+    },
+    matchedSubtitleCount() {
+      return this.subtitleMatchList.filter(item => item.subtitle).length
     }
   },
   methods: {
@@ -273,9 +336,25 @@ export default {
         await this.cacheVideo(video)
       }))
     },
-    async uploadFileWithPolicy(file, extension) {
-      const policy = await getOriginalUploadPolicy(extension)
-      return uploadOriginalFile(file, policy)
+    async uploadFileWithPolicy(file, extension, filePath) {
+      const api = window.electronAPI
+      if (!api?.uploadOssFile) throw new Error('当前应用不支持 OSS 上传，请重新安装桌面客户端')
+      const policyResponse = await getOriginalUploadPolicy(extension)
+      const policy = policyResponse?.data || policyResponse
+      const resolvedPath = filePath || api.getFilePath?.(file)
+      if (!resolvedPath) throw new Error(`无法读取待上传文件：${file?.name || extension}`)
+      const uploadResult = await api.uploadOssFile({
+        host: policy.host,
+        policy,
+        filePath: resolvedPath,
+        fileName: file?.name || extension
+      })
+      console.log('[OSS上传成功]', {
+        fileName: file?.name || extension,
+        fileKey: policy.fileKey,
+        result: uploadResult
+      })
+      return policy.fileKey
     },
     async splitVideo(video) {
       const api = window.electronAPI
@@ -301,14 +380,11 @@ export default {
       const blob = await response.blob()
       return new File([blob], video.name, {type: blob.type || 'video/*'})
     },
-    getApiToken() {
-      return this.$store.state.user?.token || '91603f56-6f75-45fa-b8a8-ebf5e463f1f9'
-    },
     async uploadVideo(video) {
       const media = await this.splitVideo(video)
       try {
-        const videoKey = await this.uploadFileWithPolicy(media.muteFile, getFileExt(video.name))
-        const audioKey = await this.uploadFileWithPolicy(media.audioFile, 'mp3')
+        const videoKey = await this.uploadFileWithPolicy(media.muteFile, getFileExt(video.name), media.paths.mutePath)
+        const audioKey = await this.uploadFileWithPolicy(media.audioFile, 'mp3', media.paths.audioPath)
         return {
           name: video.name,
           videoMuteUrl: videoKey,
@@ -325,7 +401,7 @@ export default {
       const name = getBaseName(video.name).toLowerCase()
       const subtitle = this.subtitleFiles.find(file => getBaseName(file.name).toLowerCase() === name)
       if (!subtitle) return ''
-      return this.uploadFileWithPolicy(subtitle, getFileExt(subtitle.name))
+      return this.uploadFileWithPolicy(subtitle, getFileExt(subtitle.name), window.electronAPI?.getFilePath?.(subtitle))
     },
     async removeVideo(id) {
       const video = this.videos.find(v => v.id === id)
@@ -342,11 +418,40 @@ export default {
       }
     },
     openSubtitlePicker() {
-      this.$refs.subtitleInput.click()
+      const subtitleInput = this.$refs.subtitleInput
+      const picker = Array.isArray(subtitleInput) ? subtitleInput[0] : subtitleInput
+      if (picker && typeof picker.click === 'function') {
+        picker.click()
+      }
     },
     selectSubtitleFolder(e) {
-      this.subtitleFiles = [...e.target.files];
-      this.subtitleFolder = this.subtitleFiles[0]?.webkitRelativePath?.split('/')[0] || '已选择字幕文件夹'
+      const picked = [...(e.target.files || [])]
+      const ignored = picked.filter(file => !/\.srt$/i.test(file.name)).length
+      const srtFiles = picked.filter(file => /\.srt$/i.test(file.name));
+      const merged = [...this.subtitleFiles, ...srtFiles].filter((file, index, arr) => arr.findIndex(f => f.name === file.name && f.size === file.size) === index)
+      this.subtitleFiles = merged;
+      this.subtitleFolder = merged.length ? `已选择 ${merged.length} 个 srt 字幕文件` : ''
+      this.selectedSubtitleName = ''
+      this.selectedSubtitleContent = ''
+      e.target.value = ''
+      if (!this.subtitleFiles.length) return alert('所选文件夹中没有 srt 字幕文件，请重新选择')
+      if (ignored) alert(`已自动过滤 ${ignored} 个非 srt 文件，仅保留 srt 字幕`)
+    },
+    showSubtitleMatches() {
+      this.subtitleMatchVisible = true
+    },
+    previewSubtitle(file) {
+      this.selectedSubtitleName = file.name
+      this.subtitlePreviewVisible = true
+      this.selectedSubtitleContent = '正在读取字幕…'
+      const reader = new FileReader()
+      reader.onload = event => {
+        this.selectedSubtitleContent = String(event.target.result || '')
+      }
+      reader.onerror = () => {
+        this.selectedSubtitleContent = '字幕读取失败，请重试'
+      }
+      reader.readAsText(file)
     },
     async submit() {
       if (!this.projectName) return alert('请输入项目名称');
@@ -356,15 +461,14 @@ export default {
         // const r = await fetchUserPoints();
         // const points = Number(r?.points ?? r?.data?.points ?? this.$store.state.user?.points ?? 0);
         // if (points < this.totalPoints) return alert('您的积分不足，无法提交此任务');
-        const token = this.getApiToken()
         this.submitting = true;
         this.status = 'active';
         this.step = 0;
         const originalList = []
         this.step = 1
         for (const video of this.videos) {
-          const item = await this.uploadVideo(video, token)
-          if (this.subtitleSource === 'upload') item.srtUrl = await this.uploadSubtitle(video, token)
+          const item = await this.uploadVideo(video)
+          if (this.subtitleSource === 'upload') item.srtUrl = await this.uploadSubtitle(video)
           originalList.push(item)
         }
 
@@ -386,7 +490,7 @@ export default {
               bottom_right_y: region.y + region.h
             })
           } : {})
-        }, token)
+        })
         this.status = 'done';
         setTimeout(() => this.$router.push({name: 'home'}), 700)
       } catch (e) {
@@ -592,6 +696,148 @@ export default {
   font-size: 12px
 }
 
+.segment-settings {
+  margin-bottom: 8px;
+  padding: 2px 4px 4px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.subtitle-upload-panel {
+  margin-top: 12px;
+}
+
+.subtitle-selection {
+  margin-top: 12px;
+  border: 1px solid #eee;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.subtitle-selection__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: #fafafa;
+  color: #555;
+  font-size: 13px;
+}
+
+.text-button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #2878ff;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.subtitle-file-list {
+  max-height: 130px;
+  overflow-y: auto;
+}
+
+.subtitle-file {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 12px;
+  border: 0;
+  border-top: 1px solid #f3f3f3;
+  background: #fff;
+  color: #333;
+  text-align: left;
+  cursor: pointer;
+}
+
+.subtitle-file:hover,
+.subtitle-file--active {
+  background: #fff7f0;
+}
+
+.subtitle-file__name,
+.match-video,
+.match-subtitle {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.subtitle-file__name {
+  max-width: 82%;
+}
+
+.subtitle-file__action {
+  color: #2878ff;
+  font-size: 12px;
+}
+
+.match-summary {
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border-radius: 4px;
+  background: #fff7f0;
+  color: #8b5a32;
+  font-size: 13px;
+}
+
+.match-list {
+  max-height: 360px;
+  overflow-y: auto;
+  border: 1px solid #eee;
+  border-radius: 4px;
+}
+
+.match-row {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr auto;
+  gap: 12px;
+  align-items: center;
+  min-height: 42px;
+  padding: 0 12px;
+  border-bottom: 1px solid #f2f2f2;
+  font-size: 13px;
+}
+
+.match-row:last-child {
+  border-bottom: 0;
+}
+
+.match-subtitle {
+  color: #666;
+}
+
+.match-missing {
+  color: #f56c6c;
+}
+
+.match-count {
+  float: left;
+  color: #888;
+  font-size: 13px;
+  line-height: 32px;
+}
+
+.empty-match {
+  padding: 30px;
+  color: #999;
+  text-align: center;
+}
+
+.subtitle-preview {
+  max-height: 460px;
+  margin: 0;
+  padding: 14px;
+  overflow: auto;
+  border-radius: 4px;
+  background: #f7f7f7;
+  color: #333;
+  font: 13px/1.7 Consolas, Monaco, monospace;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .estimate {
   text-align: center;
   margin-top: 30px
@@ -638,5 +884,83 @@ export default {
 }
 .subtitle-tabs {
   overflow: hidden;
+}
+
+::v-deep .subtitle-match-dialog,
+::v-deep .subtitle-preview-dialog {
+  background: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+::v-deep .v-modal {
+  background: rgba(0, 0, 0, .5);
+}
+</style>
+<style lang="scss">
+.subtitle-match-dialog,
+.subtitle-preview-dialog {
+  background: #fff !important;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.subtitle-match-dialog .el-dialog__body,
+.subtitle-preview-dialog .el-dialog__body {
+  background: #fff;
+}
+.custom-modal-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, .5);
+}
+.custom-modal-mask--inner {
+  z-index: 10000;
+}
+.custom-modal {
+  width: 620px;
+  max-width: calc(100vw - 40px);
+  max-height: calc(100vh - 60px);
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, .25);
+}
+.custom-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  font-size: 16px;
+  color: #333;
+  font-weight: 500;
+}
+.custom-modal-close {
+  border: 0;
+  background: transparent;
+  font-size: 16px;
+  color: #999;
+  cursor: pointer;
+}
+.custom-modal-body {
+  padding: 0 20px 10px;
+  overflow-y: auto;
+}
+.custom-modal-foot {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 12px 20px 18px;
+}
+.custom-modal-foot .match-count {
+  margin-right: auto;
+  float: none;
+  line-height: 1.5;
 }
 </style>
