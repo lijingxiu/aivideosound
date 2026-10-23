@@ -24,6 +24,12 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+    path: '/quick-video-translate/new',
+    name: 'quick-video-translate-new',
+    component: () => import('../views/QuickVideoTranslateCreateView.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
     path: '/video-translate',
     name: 'video-translate',
     component: () => import('../views/HomeView.vue'),

@@ -6,7 +6,7 @@
           <AppIcon name="search" :size="16" color="#aaa" />
           <input v-model="searchKeyword" type="text" placeholder="输入项目名称搜索" />
         </div>
-        <button class="btn-add" type="button" @click="notifyComingSoon">
+        <button class="btn-add" type="button" @click="$router.push({ name: 'quick-video-translate-new' })">
           <AppIcon name="plus" :size="16" color="#fff" />
           新增项目
         </button>
