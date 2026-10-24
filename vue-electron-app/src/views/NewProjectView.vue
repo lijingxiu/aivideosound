@@ -699,7 +699,6 @@ export default {
 .segment-settings {
   margin-bottom: 8px;
   padding: 2px 4px 4px;
-  border-bottom: 1px solid #f0f0f0;
 }
 
 .subtitle-upload-panel {

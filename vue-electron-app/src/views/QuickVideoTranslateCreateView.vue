@@ -41,7 +41,7 @@
                 </el-tooltip>
               </span>
               <div class="segment-settings">
-                <TranslationDictionary :source-language="sourceLanguage" :target-language="targetLanguage" :languages="languages"/>
+                <TranslationDictionary :source-language="sourceLanguage" :target-language="targetLanguage" :languages="languages" :shared-state="dictionarySettings"/>
               </div>
               <div v-if="subtitleSource === 'upload'" class="subtitle-upload-panel">
                 <div class="subtitle-folder" @click="openSubtitlePicker">
@@ -170,7 +170,8 @@ export default {
     status: 'active',
     languages: [],
     subtitleSources: SUBTITLE_SOURCES,
-    projectInfo: null
+    projectInfo: null,
+    dictionarySettings: { enabled: false, entries: [], selected: [] }
   }),
   created() {
     this.loadProjectInfo()
@@ -752,7 +753,6 @@ export default {
 .segment-settings {
   margin-bottom: 8px;
   padding: 2px 4px 4px;
-  border-bottom: 1px solid #f0f0f0;
 }
 
 .subtitle-upload-panel {

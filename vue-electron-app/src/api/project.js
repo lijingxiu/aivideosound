@@ -50,6 +50,37 @@ export function submitProjectTask(payload) {
   })
 }
 
+export function fetchTranslationDictionaryList({ fromLangCode, destLangCode, keyword = '' }) {
+  const params = new URLSearchParams({
+    token: getProjectToken(),
+    fromLangCode,
+    destLangCode,
+    keyword
+  })
+  return request(`/DubLocalizeTransDict/GetList?${params.toString()}`)
+}
+
+export function addTranslationDictionary({ fromLangCode, destLangCode, termListStr }) {
+  return request(`/DubLocalizeTransDict/Add?token=${encodeURIComponent(getProjectToken())}`, {
+    method: 'POST',
+    body: JSON.stringify({ fromLangCode, destLangCode, termListStr })
+  })
+}
+
+export function updateTranslationDictionary(payload) {
+  return request(`/DubLocalizeTransDict/Update?token=${encodeURIComponent(getProjectToken())}`, {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  })
+}
+
+export function deleteTranslationDictionary(ids) {
+  return request(`/DubLocalizeTransDict/Delete?token=${encodeURIComponent(getProjectToken())}`, {
+    method: 'POST',
+    body: JSON.stringify({ids})
+  })
+}
+
 export function deleteProject(id) {
   return request(`/DubProject/Delete?token=${encodeURIComponent(getProjectToken())}`, {
     method: 'POST',
