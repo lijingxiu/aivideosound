@@ -15,22 +15,22 @@
                     :select-label="subtitleErase ? '拖动调整擦除位置' : '请框选字幕区域（对所有视频有效）'"
                     :region="region" @update:region="region = $event"/>
       <section class="settings">
-        <label>项目名称
+        <label class="project-name-row">项目名称
           <el-input v-model.trim="projectName" maxlength="20" placeholder="请输入"
                     class="project-name-input"></el-input>
-          <em>{{
-              projectName.length
-            }}/20</em></label>
-        <label>源语言
-          <el-select v-model="sourceLanguage" placeholder="请选择" class="language-select">
-            <el-option v-for="l in languages" :key="l.code" :label="l.name" :value="l.code"/>
-          </el-select>
-        </label>
-        <label>目标语言
-          <el-select v-model="targetLanguage" placeholder="请选择" class="language-select">
-            <el-option v-for="l in languages" :key="l.code" :label="l.name" :value="l.code"/>
-          </el-select>
-        </label>
+          <em>{{ projectName.length }}/20</em></label>
+        <div class="language-row">
+          <label>源语言
+            <el-select v-model="sourceLanguage" placeholder="请选择" class="language-select">
+              <el-option v-for="l in languages" :key="l.code" :label="l.name" :value="l.code"/>
+            </el-select>
+          </label>
+          <label>目标语言
+            <el-select v-model="targetLanguage" placeholder="请选择" class="language-select">
+              <el-option v-for="l in languages" :key="l.code" :label="l.name" :value="l.code"/>
+            </el-select>
+          </label>
+        </div>
         <div class="setting-block">
           <div>翻译设置</div>
           <el-tabs v-model="subtitleSource" type="border-card" class="subtitle-tabs">
@@ -74,11 +74,11 @@
           <div class="dubbing-title">配音设置 <el-switch v-model="dubbingEnabled" active-color="#ed6200" inactive-color="#d9d9d9"/></div>
           <el-tabs v-model="dubbingTab" type="border-card" class="subtitle-tabs">
             <el-tab-pane label="原声克隆" name="clone">
-              <div class="segment-setting-row"><span>视频时长动态调整 <el-tooltip content="开启后，将适当延长视频时长，以达到最佳配音效果" placement="top"><i class="setting-info">i</i></el-tooltip></span><el-switch v-model="durationAdjust" active-color="#2878ff"/></div>
-              <div class="segment-setting-row"><span>译文字幕时间戳动态调整 <el-tooltip content="开启后，将适当调整译文字幕时间戳信息，均衡配音语速，以达到最佳配音效果" placement="top"><i class="setting-info">i</i></el-tooltip></span><el-switch v-model="timestampAdjust" active-color="#2878ff"/></div>
+              <div class="segment-setting-row"><span>视频时长动态调整 <el-tooltip content="开启后，将适当延长视频时长，以达到最佳配音效果" placement="top"><i class="setting-info">i</i></el-tooltip></span><el-switch v-model="durationAdjust" active-color="#ed6200"/></div>
+              <div class="segment-setting-row"><span>译文字幕时间戳动态调整 <el-tooltip content="开启后，将适当调整译文字幕时间戳信息，均衡配音语速，以达到最佳配音效果" placement="top"><i class="setting-info">i</i></el-tooltip></span><el-switch v-model="timestampAdjust" active-color="#ed6200"/></div>
               <div class="segment-setting-row"><span>去除背景音 <el-tooltip content="生成翻译视频时是否要去除源视频中的音效和背景音乐" placement="top"><i class="setting-info">i</i></el-tooltip></span><el-radio-group v-model="backgroundAudio"><el-radio label="keep">不去除</el-radio><el-radio label="music">仅去除背景音</el-radio><el-radio label="all">去除背景音及音效</el-radio></el-radio-group></div>
-              <div class="segment-setting-row"><span>源字幕擦除</span><el-switch v-model="subtitleErase" active-color="#2878ff"/></div>
-              <div class="segment-setting-row"><span>新字幕压制</span><el-switch v-model="burnSubtitle" active-color="#2878ff"/></div>
+              <div class="segment-setting-row"><span>源字幕擦除</span><el-switch v-model="subtitleErase" active-color="#ed6200"/></div>
+              <div class="segment-setting-row"><span>新字幕压制</span><el-switch v-model="burnSubtitle" active-color="#ed6200"/></div>
               <SubtitleBurnSettings v-if="burnSubtitle"/>
             </el-tab-pane>
             <el-tab-pane label="AI音色库" name="library"><AiVoiceLibrary/></el-tab-pane>
@@ -509,7 +509,7 @@ export default {
   background: #fff;
   display: flex;
   flex-direction: column;
-  overflow: auto
+  overflow: hidden
 }
 
 .page-head {
@@ -539,7 +539,8 @@ export default {
   grid-template-columns:250px minmax(360px, 1fr) 500px;
   gap: 16px;
   flex: 1;
-  min-height: 0
+  min-height: 0;
+  overflow: hidden;
 }
 
 .workspace--empty {
@@ -547,7 +548,64 @@ export default {
 }
 
 .settings {
-  padding: 4px 2px
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 4px 8px 16px 2px;
+}
+
+.project-name-row {
+  grid-template-columns: 80px minmax(0, 1fr) auto !important;
+  column-gap: 6px !important;
+}
+
+.project-name-row .project-name-input {
+  max-width: 500px;
+}
+
+.language-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.language-row label {
+  display: grid;
+  grid-template-columns: 80px minmax(0, 1fr);
+  align-items: center;
+  column-gap: 6px;
+  min-width: 0;
+  margin-bottom: 20px;
+  color: #333;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.language-row .language-select {
+  width: 130px;
+  max-width: 100%;
+  min-width: 0;
+  height: 34px;
+}
+
+.language-row ::v-deep .el-input__suffix {
+  display: flex;
+  align-items: center;
+  height: 100%;
+}
+
+.language-row ::v-deep .el-input__suffix-inner {
+  display: flex;
+  align-items: center;
+  height: 100%;
+}
+
+.language-row ::v-deep .el-select .el-input__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  line-height: normal;
 }
 
 .settings > label {
@@ -591,13 +649,13 @@ export default {
 }
 
 ::v-deep .el-input__inner {
-  height: 38px !important;
-  line-height: 38px !important;
+  height: 34px !important;
+  line-height: 34px !important;
   border-radius: 6px;
 }
 
 ::v-deep .el-input {
-  height: 38px !important;
+  height: 34px !important;
 }
 
 .settings em {
