@@ -7,17 +7,17 @@ export function getProjectToken() {
 }
 
 export function fetchProjectInfo() {
-  return request(`/DubProject/GetInfo?token=${encodeURIComponent(getProjectToken())}`)
+  return request(`/DubFastProject/GetInfo?token=${encodeURIComponent(getProjectToken())}`)
 }
 
 export function fetchProjectList({ pageOffset = 0, pageLimit = 10, name = '' } = {}) {
   const params = new URLSearchParams({
     token: getProjectToken(),
     pageOffset: String(pageOffset),
-    pageLimit: String(pageLimit),
-    name
+    pageLimit: String(pageLimit)
   })
-  return request(`/DubProject/GetList?${params.toString()}`)
+  if (name) params.set('name', name)
+  return request(`/DubFastProject/GetList?${params.toString()}`)
 }
 
 export function fetchOriginalList({ projectId, name = '', state = '', checkState = '', orderType = 0 } = {}) {
@@ -44,7 +44,7 @@ export function getOriginalUploadPolicy(fileFormat) {
 }
 
 export function submitProjectTask(payload) {
-  return request(`/DubProject/Submit?token=${encodeURIComponent(getProjectToken())}`, {
+  return request(`/DubFastProject/Submit?token=${encodeURIComponent(getProjectToken())}`, {
     method: 'POST',
     body: JSON.stringify(payload)
   })

@@ -173,6 +173,15 @@ ipcMain.handle('remove-cached-video', (_event, id) => {
     return true;
 });
 
+ipcMain.handle('write-temp-file', (_event, { fileName, bytes }) => {
+    const dir = join(app.getPath('temp'), 'qianyin-media', 'thumbnails');
+    mkdirSync(dir, { recursive: true });
+    const safeName = String(fileName || 'thumbnail.jpg').replace(/[^\\w.\\-]/g, '_');
+    const filePath = join(dir, `${Date.now()}-${Math.random().toString(36).slice(2)}-${safeName}`);
+    writeFileSync(filePath, Buffer.from(bytes));
+    return filePath;
+});
+
 ipcMain.handle('read-temp-file', (_event, filePath) => {
     if (!filePath || !existsSync(filePath)) throw new Error('找不到处理后的文件');
     return new Uint8Array(readFileSync(filePath));

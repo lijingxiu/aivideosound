@@ -71,11 +71,11 @@ export default {
 }
 
 .controls .font-select ::v-deep .el-select {
-  width: 64px;
+  width: 100px;
 }
 
 .controls .size-select ::v-deep .el-select {
-  width: 32px;
+  width: 64px;
 }
 
 .controls .color-select {
@@ -94,8 +94,8 @@ export default {
 .controls .font-select ::v-deep .el-input__inner,
 .controls .size-select ::v-deep .el-input__inner {
   box-sizing: border-box;
-  height: 26px;
-  line-height: 26px;
+  height: 22px;
+  line-height: 22px;
   padding-right: 24px;
 }
 
@@ -154,6 +154,7 @@ export default {
 .controls input[type=range] {
   width: 100px;
   accent-color: #ed6200;
+  background-color: #ccc;
 }
 
 .controls ::v-deep .el-radio {

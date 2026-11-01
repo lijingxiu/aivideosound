@@ -138,7 +138,10 @@ export default {
       this.enabled = false
     },
     onToggle(value) {
-      if (value) this.open()
+      if (value && (!this.sourceLanguage || !this.targetLanguage)) {
+        this.enabled = false
+        this.$message?.warning('请先选择源语言和目标语言')
+      }
     },
     open() {
       if (!this.sourceLanguage || !this.targetLanguage) {

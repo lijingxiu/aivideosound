@@ -22,12 +22,12 @@
         <div class="language-row">
           <label>源语言
             <el-select v-model="sourceLanguage" placeholder="请选择" class="language-select">
-              <el-option v-for="l in languages" :key="l.code" :label="l.name" :value="l.code"/>
+              <el-option v-for="l in sourceLanguages" :key="l.code" :label="l.name" :value="l.code" :disabled="l.code === targetLanguage"/>
             </el-select>
           </label>
           <label>目标语言
             <el-select v-model="targetLanguage" placeholder="请选择" class="language-select">
-              <el-option v-for="l in languages" :key="l.code" :label="l.name" :value="l.code"/>
+              <el-option v-for="l in targetLanguages" :key="l.code" :label="l.name" :value="l.code" :disabled="l.code === sourceLanguage"/>
             </el-select>
           </label>
         </div>
@@ -40,7 +40,7 @@
                   <span>{{ s.label }}<small v-if="s.tag">（{{ s.tag }}）</small></span>
                 </el-tooltip>
               </span>
-              <div class="segment-settings">
+              <div v-if="subtitleSource !== 'upload'" class="segment-settings">
                 <TranslationDictionary :source-language="sourceLanguage" :target-language="targetLanguage" :languages="languages" :shared-state="dictionarySettings"/>
               </div>
               <div v-if="subtitleSource === 'upload'" class="subtitle-upload-panel">
@@ -60,7 +60,10 @@
                             class="subtitle-file" :class="{ 'subtitle-file--active': selectedSubtitleName === file.name }"
                             @click="previewSubtitle(file)">
                       <span class="subtitle-file__name">{{ file.name }}</span>
-                      <span class="subtitle-file__action">查看</span>
+                      <span class="subtitle-file__actions">
+                        <span class="subtitle-file__action">查看</span>
+                        <button type="button" class="subtitle-file__delete" @click.stop="removeSubtitle(file)">删除</button>
+                      </span>
                     </button>
                   </div>
                 </div>
@@ -79,12 +82,12 @@
               <div class="segment-setting-row"><span>去除背景音 <el-tooltip content="生成翻译视频时是否要去除源视频中的音效和背景音乐" placement="top"><i class="setting-info">i</i></el-tooltip></span><el-radio-group v-model="backgroundAudio"><el-radio label="keep">不去除</el-radio><el-radio label="music">仅去除背景音</el-radio><el-radio label="all">去除背景音及音效</el-radio></el-radio-group></div>
               <div class="segment-setting-row"><span>源字幕擦除</span><el-switch v-model="subtitleErase" active-color="#ed6200"/></div>
               <div class="segment-setting-row"><span>新字幕压制</span><el-switch v-model="burnSubtitle" active-color="#ed6200"/></div>
-              <SubtitleBurnSettings v-if="burnSubtitle"/>
+              <SubtitleBurnSettings v-if="burnSubtitle" ref="subtitleBurnSettings"/>
             </el-tab-pane>
             <el-tab-pane label="AI音色库" name="library"><AiVoiceLibrary/></el-tab-pane>
           </el-tabs>
         </div>
-        <div class="estimate">积分消耗预估：<b>{{ totalPoints || '--' }}</b></div>
+        <div class="estimate">积分消耗预估：<b>{{ totalPoints }}</b></div>
         <button class="submit" :disabled="!videos.length" @click="submit">提交</button>
       </section>
     </div>
@@ -168,7 +171,8 @@ export default {
     submitting: false,
     step: 0,
     status: 'active',
-    languages: [],
+    sourceLanguages: [],
+    targetLanguages: [],
     subtitleSources: SUBTITLE_SOURCES,
     projectInfo: null,
     dictionarySettings: { enabled: false, entries: [], selected: [] }
@@ -187,11 +191,18 @@ export default {
     }, totalPoints() {
       return calcTotalPoints(this.videos, {
         subtitleSource: this.subtitleSource,
-        roleRecognition: this.roleRecognition,
-        vocalSeparation: this.vocalSeparation,
-        subtitleErase: this.subtitleErase
+        dubbingEnabled: this.dubbingEnabled,
+        dubbingTab: this.dubbingTab,
+        backgroundAudio: this.backgroundAudio,
+        subtitleErase: this.subtitleErase,
+        pointConfig: this.projectInfo?.pointConfig
       })
     },
+    languages() {
+      return [...this.sourceLanguages, ...this.targetLanguages]
+        .filter((language, index, list) => list.findIndex(item => item.code === language.code) === index)
+    },
+    
     subtitleMatchList() {
       return this.videos.map(video => ({
         video,
@@ -218,8 +229,9 @@ export default {
     async loadProjectInfo() {
       try {
         const response = await fetchProjectInfo()
-        this.projectInfo = response.data
-        this.languages = response.data?.languageList || []
+        this.projectInfo = response.data || {}
+        this.sourceLanguages = response.data?.fromLanguageList || []
+        this.targetLanguages = response.data?.destLanguageList || []
       } catch (error) {
         console.error('获取项目配置失败', error)
       }
@@ -374,15 +386,57 @@ export default {
       const blob = await response.blob()
       return new File([blob], video.name, {type: blob.type || 'video/*'})
     },
+    async createFirstFrameFile(video) {
+      const source = video.objectUrl
+      if (!source) throw new Error(`无法读取视频首帧：${video.name}`)
+      const element = document.createElement('video')
+      element.preload = 'auto'
+      element.muted = true
+      element.playsInline = true
+      element.src = source
+      try {
+        await new Promise((resolve, reject) => {
+          element.onloadeddata = resolve
+          element.onerror = () => reject(new Error(`读取视频首帧失败：${video.name}`))
+        })
+        const canvas = document.createElement('canvas')
+        canvas.width = element.videoWidth || 320
+        canvas.height = element.videoHeight || 180
+        const context = canvas.getContext('2d')
+        if (!context) throw new Error(`无法生成视频缩略图：${video.name}`)
+        context.drawImage(element, 0, 0, canvas.width, canvas.height)
+        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.85))
+        if (!blob) throw new Error(`生成视频缩略图失败：${video.name}`)
+        const file = new File([blob], `${getBaseName(video.name)}.jpg`, {type: 'image/jpeg'})
+        const api = window.electronAPI
+        if (!api?.writeTempFile) throw new Error('当前应用不支持写入缩略图临时文件，请重新安装桌面客户端')
+        const bytes = new Uint8Array(await blob.arrayBuffer())
+        const tempPath = await api.writeTempFile({
+          fileName: file.name,
+          bytes: Array.from(bytes)
+        })
+        return {file, tempPath}
+      } finally {
+        element.src = ''
+      }
+    },
     async uploadVideo(video) {
       const media = await this.splitVideo(video)
       try {
         const videoKey = await this.uploadFileWithPolicy(media.muteFile, getFileExt(video.name), media.paths.mutePath)
         const audioKey = await this.uploadFileWithPolicy(media.audioFile, 'mp3', media.paths.audioPath)
+        const thumb = await this.createFirstFrameFile(video)
+        let thumbUrl
+        try {
+          thumbUrl = await this.uploadFileWithPolicy(thumb.file, 'jpg', thumb.tempPath)
+        } finally {
+          await window.electronAPI?.removeTempFiles?.([thumb.tempPath])
+        }
         return {
           name: video.name,
           videoMuteUrl: videoKey,
           audioUrl: audioKey,
+          thumbUrl,
           videoDuration: Math.floor(Number(video.duration) || 0),
           videoSize: Math.floor((Number(video.size) || media.muteFile.size || 0) / (1024 * 1024)),
           srtUrl: ''
@@ -434,6 +488,15 @@ export default {
     showSubtitleMatches() {
       this.subtitleMatchVisible = true
     },
+    removeSubtitle(file) {
+      this.subtitleFiles = this.subtitleFiles.filter(item => item !== file)
+      this.subtitleFolder = this.subtitleFiles.length ? `已选择 ${this.subtitleFiles.length} 个 srt 字幕文件` : ''
+      if (this.selectedSubtitleName === file.name) {
+        this.selectedSubtitleName = ''
+        this.selectedSubtitleContent = ''
+        this.subtitlePreviewVisible = false
+      }
+    },
     previewSubtitle(file) {
       this.selectedSubtitleName = file.name
       this.subtitlePreviewVisible = true
@@ -448,10 +511,19 @@ export default {
       reader.readAsText(file)
     },
     async submit() {
-      if (!this.projectName) return alert('请输入项目名称');
-      if (!this.sourceLanguage) return alert('请选择源语言');
-      if (!this.targetLanguage) return alert('请选择目标语言');
-      if (this.subtitleSource === 'upload' && !this.subtitleFiles.length) return alert('请选择字幕文件所在位置');
+      if (!this.projectName) return this.$alert('请输入项目名称', '提示', {type: 'warning'});
+      if (!this.sourceLanguage) return this.$alert('请选择源语言', '提示', {type: 'warning'});
+      if (!this.targetLanguage) return this.$alert('请选择目标语言', '提示', {type: 'warning'});
+      if (this.sourceLanguage === this.targetLanguage) return this.$alert('源语言和目标语言不能相同', '提示', {type: 'warning'});
+      if (this.subtitleSource === 'upload' && !this.subtitleFiles.length) return this.$alert('请选择字幕文件所在位置', '提示', {type: 'warning'});
+      if (this.subtitleSource === 'upload') {
+        const unmatchedVideos = this.subtitleMatchList
+          .filter(item => !item.subtitle)
+          .map(item => item.video.name)
+        if (unmatchedVideos.length) {
+          return this.$alert(`以下视频没有匹配的字幕文件：\n${unmatchedVideos.join('\n')}`, '字幕未匹配', {type: 'warning'})
+        }
+      }
       try {
         // const r = await fetchUserPoints();
         // const points = Number(r?.points ?? r?.data?.points ?? this.$store.state.user?.points ?? 0);
@@ -469,30 +541,46 @@ export default {
 
         this.step = 2
         const region = this.region || {}
+        const burnSettings = this.$refs.subtitleBurnSettings?.settings
+        const eraseLocationStr = JSON.stringify({
+          top_left_x: region.x,
+          top_left_y: region.y,
+          bottom_right_x: region.x + region.w,
+          bottom_right_y: region.y + region.h
+        })
+        const burnSubtitleStyle = burnSettings ? {
+          fontName: burnSettings.font,
+          fontSize: burnSettings.size,
+          textColor: burnSettings.color,
+          bgColor: burnSettings.background === 'background' ? 1 : '',
+          strokeColor: '#000000',
+          strokeWidth: burnSettings.background === 'outline' ? 1 : 0,
+          bold: burnSettings.bold,
+          positionPercentage: Number(burnSettings.position)
+        } : null
         await submitProjectTask({
           name: this.projectName,
-          langCode: this.sourceLanguage,
-          targetLangCode: this.targetLanguage,
-          subtitleType: {asr: 1, ocr: 2, upload: 3}[this.subtitleSource],
-          roleType: this.roleRecognition ? 1 : 0,
-          separateType: this.vocalSeparation ? 1 : 0,
+          fromLangCode: this.sourceLanguage,
+          destLangCode: this.targetLanguage,
+          transType: this.subtitleSource === 'upload' ? 2 : 1,
+          ...(this.subtitleSource !== 'upload' ? {subtitleType: {asr: 1, ocr: 2}[this.subtitleSource]} : {}),
+          ...(this.subtitleSource !== 'upload' ? {transDictType: this.dictionarySettings.enabled ? 1 : 0} : {}),
+          dubType: this.dubbingEnabled ? (this.dubbingTab === 'clone' ? 1 : 3) : 0,
+          dubVideoAdjust: this.dubbingEnabled && this.durationAdjust ? 1 : 0,
+          dubAudioAdjust: this.dubbingEnabled && this.timestampAdjust ? 1 : 0,
+          removeBgAudio: {keep: 0, music: 1, all: 2}[this.backgroundAudio],
           eraseType: this.subtitleErase ? 1 : 0,
-          originalListStr: JSON.stringify(originalList),
-          ...(this.subtitleErase ? {
-            eraseLocationStr: JSON.stringify({
-              top_left_x: region.x,
-              top_left_y: region.y,
-              bottom_right_x: region.x + region.w,
-              bottom_right_y: region.y + region.h
-            })
-          } : {})
+          ...(this.subtitleErase ? {eraseLocationStr} : {}),
+          burnSubtitleType: this.burnSubtitle ? 1 : 0,
+          ...(burnSubtitleStyle ? {burnSubtitleStyle: JSON.stringify(burnSubtitleStyle)} : {}),
+          originalListStr: JSON.stringify(originalList)
         })
         this.status = 'done';
         setTimeout(() => this.$router.push({name: 'home'}), 700)
       } catch (e) {
         this.submitting = false;
         this.status = 'active';
-        alert(e.message || '提交失败，请稍后重试')
+        this.$alert(e.message || '提交失败，请稍后重试', '提交失败', {type: 'error'})
       }
     }
   }
@@ -742,7 +830,7 @@ export default {
 }
 
 .subtitle-folder span {
-  color: #2878ff
+  color: #ff7a00
 }
 
 .subtitle-folder p {
@@ -780,7 +868,7 @@ export default {
   padding: 0;
   border: 0;
   background: transparent;
-  color: #2878ff;
+  color: #ff7a00;
   font-size: 13px;
   cursor: pointer;
 }
@@ -821,9 +909,25 @@ export default {
   max-width: 82%;
 }
 
+.subtitle-file__actions {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 12px;
+}
+
 .subtitle-file__action {
-  color: #2878ff;
+  color: #ff7a00;
   font-size: 12px;
+}
+
+.subtitle-file__delete {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #ff7a00;
+  font-size: 12px;
+  cursor: pointer;
 }
 
 .match-summary {
