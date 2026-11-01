@@ -82,9 +82,9 @@
               <div class="segment-setting-row"><span>去除背景音 <el-tooltip content="生成翻译视频时是否要去除源视频中的音效和背景音乐" placement="top"><i class="setting-info">i</i></el-tooltip></span><el-radio-group v-model="backgroundAudio"><el-radio label="keep">不去除</el-radio><el-radio label="music">仅去除背景音</el-radio><el-radio label="all">去除背景音及音效</el-radio></el-radio-group></div>
               <div class="segment-setting-row"><span>源字幕擦除</span><el-switch v-model="subtitleErase" active-color="#ed6200"/></div>
               <div class="segment-setting-row"><span>新字幕压制</span><el-switch v-model="burnSubtitle" active-color="#ed6200"/></div>
-              <SubtitleBurnSettings v-if="burnSubtitle" ref="subtitleBurnSettings"/>
+              <SubtitleBurnSettings v-if="burnSubtitle" :key="targetLanguage" ref="subtitleBurnSettings" :font-list="targetFontList"/>
             </el-tab-pane>
-            <el-tab-pane label="AI音色库" name="library"><AiVoiceLibrary/></el-tab-pane>
+            <el-tab-pane label="AI音色库" name="library"><AiVoiceLibrary v-model="selectedVoice" :language-id="targetLanguageId" :language-name="targetLanguageName"/></el-tab-pane>
           </el-tabs>
         </div>
         <div class="estimate">积分消耗预估：<b>{{ totalPoints }}</b></div>
@@ -175,10 +175,16 @@ export default {
     targetLanguages: [],
     subtitleSources: SUBTITLE_SOURCES,
     projectInfo: null,
-    dictionarySettings: { enabled: false, entries: [], selected: [] }
+    dictionarySettings: { enabled: false, entries: [], selected: [] },
+    selectedVoice: null
   }),
   created() {
     this.loadProjectInfo()
+  },
+  watch: {
+    targetLanguage() {
+      this.selectedVoice = null
+    }
   },
   beforeDestroy() {
     this.videos.forEach(video => {
@@ -202,7 +208,16 @@ export default {
       return [...this.sourceLanguages, ...this.targetLanguages]
         .filter((language, index, list) => list.findIndex(item => item.code === language.code) === index)
     },
-    
+    targetFontList() {
+      return this.targetLanguages.find(language => language.code === this.targetLanguage)?.fontList || []
+    },
+    targetLanguageId() {
+      const language = this.targetLanguages.find(item => item.code === this.targetLanguage)
+      return language?.langId || language?.languageId || language?.id || ''
+    },
+    targetLanguageName() {
+      return this.targetLanguages.find(item => item.code === this.targetLanguage)?.name || ''
+    },
     subtitleMatchList() {
       return this.videos.map(video => ({
         video,
@@ -552,9 +567,9 @@ export default {
           fontName: burnSettings.font,
           fontSize: burnSettings.size,
           textColor: burnSettings.color,
-          bgColor: burnSettings.background === 'background' ? 1 : '',
-          strokeColor: '#000000',
-          strokeWidth: burnSettings.background === 'outline' ? 1 : 0,
+          bgColor: burnSettings.background === 'background' ? burnSettings.bgColor : '',
+          strokeColor: burnSettings.background === 'outline' ? burnSettings.strokeColor : '',
+          strokeWidth: burnSettings.background === 'outline' ? burnSettings.strokeWidth : 0,
           bold: burnSettings.bold,
           positionPercentage: Number(burnSettings.position)
         } : null

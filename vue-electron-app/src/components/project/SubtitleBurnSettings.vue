@@ -1,18 +1,17 @@
 <template>
   <div class="burn">
     <div class="controls"><label class="font-select">字体
-      <el-select v-model="settings.font" size="mini">
-        <el-option label="微软雅黑" value="微软雅黑"/>
-        <el-option label="思源黑体" value="思源黑体"/>
+      <el-select v-model="settings.font" size="mini" @change="resetFontSize">
+        <el-option v-for="font in fontList" :key="font.key" :label="font.name" :value="font.key"/>
       </el-select>
     </label><label class="size-select">字号
       <el-select v-model="settings.size" size="mini">
-        <el-option v-for="size in [24,32,48,64,85]" :key="size" :label="String(size)" :value="size"/>
+        <el-option v-for="size in fontSizes" :key="size" :label="String(size)" :value="size"/>
       </el-select>
     </label><label class="color-select">字体颜色<input v-model="settings.color" type="color"></label>
       <el-checkbox v-model="settings.bold">粗体</el-checkbox>
     </div>
-    <div class="controls">
+    <div class="controls style-controls">
       <div class="background-control"><span>字幕背景</span>
         <el-radio-group v-model="settings.background">
           <el-radio label="outline">边框</el-radio>
@@ -20,23 +19,63 @@
           <el-radio label="none">关闭</el-radio>
         </el-radio-group>
       </div>
-      <label>位置<input v-model.number="settings.position" type="range" min="0"
-                        max="100"></label><span>{{ settings.position }}</span></div>
+      <label v-if="settings.background === 'outline'" class="style-color">边框颜色<input v-model="settings.strokeColor" type="color"></label>
+      <label v-else-if="settings.background === 'background'" class="style-color">背景颜色<input v-model="settings.bgColor" type="color"></label>
+      <label v-if="settings.background === 'outline'" class="stroke-width">宽度
+        <el-select v-model="settings.strokeWidth" size="mini">
+          <el-option v-for="width in strokeWidths" :key="width" :label="String(width)" :value="width"/>
+        </el-select>
+      </label>
+    </div>
+    <div class="controls position-control">
+      <label>垂直位置<input v-model.number="settings.position" type="range" min="0" max="100"></label>
+      <span>{{ settings.position }}</span>
+    </div>
   </div>
 </template>
 <script>
 export default {
   name: 'SubtitleBurnSettings',
+  props: {
+    fontList: {type: Array, default: () => []}
+  },
   data: () => ({
     settings: {
-      font: '微软雅黑',
+      font: '',
       size: 32,
       color: '#ed6200',
       bold: false,
       background: 'outline',
-      position: 75
+      strokeColor: '#ed6200',
+      strokeWidth: 1,
+      bgColor: '#ed6200',
+      position: 24
     }
-  })
+  }),
+  computed: {
+    fontSizes() {
+      return Array.from({length: 23}, (_, index) => 12 + index * 4)
+    },
+    strokeWidths() {
+      return Array.from({length: 10}, (_, index) => index + 1)
+    }
+  },
+  watch: {
+    fontList: {
+      immediate: true,
+      handler(fontList) {
+        if (!fontList.length) return
+        this.settings.font = fontList[0].key
+        this.settings.size = fontList[0].size
+      }
+    }
+  },
+  methods: {
+    resetFontSize(fontKey) {
+      const font = this.fontList.find(item => item.key === fontKey)
+      if (font) this.settings.size = font.size
+    }
+  }
 }
 </script>
 <style scoped lang="scss">
@@ -61,6 +100,37 @@ export default {
 
 .controls + .controls {
   margin-top: 14px;
+}
+
+.style-controls {
+  flex-wrap: wrap;
+}
+
+.style-color {
+  gap: 8px !important;
+}
+
+.stroke-width ::v-deep .el-select {
+  width: 64px;
+}
+
+.position-control {
+  justify-content: flex-start;
+  gap: 12px;
+}
+
+.position-control label {
+  flex: 1;
+}
+
+.position-control input[type=range] {
+  flex: 1;
+  width: auto;
+}
+
+.position-control > span {
+  min-width: 24px;
+  text-align: right;
 }
 
 .controls label {
