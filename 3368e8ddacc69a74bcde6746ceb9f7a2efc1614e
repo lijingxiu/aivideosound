@@ -1,0 +1,82 @@
+vue-electron-app/src/components/project/SubtitleBurnSettings.vue
+  16f5182346549e3e 74,78,97-98,157
+vue-electron-app/out/preload/index.js
+  d66f19dbc9275772 15
+vue-electron-app/src/views/QuickVideoTranslateView.vue
+  c467f3ee3973fbf0 24,29-30,33,76-91,116-166
+  d66f19dbc9275772 7-8,36,49,58-60,94-99,101-115
+vue-electron-app/src/views/QuickVideoTranslateCreateView.vue
+  d66f19dbc9275772 43,85,90,174-175,194-198,201-205,232-234,389-422,428-434,439,544-560,563-571,573-576,921-923
+  d567c678fcfad080 25,30,63-66,491-499,514-526,583,833,871,912-918,920,924-928,930
+vue-electron-app/src/utils/pointsCalculator.js
+  d66f19dbc9275772 10-15,17-20,22-23,29
+vue-electron-app/out/main/main.js
+  d66f19dbc9275772 176-184
+vue-electron-app/src/components/project/TranslationDictionary.vue
+  c467f3ee3973fbf0 141-144
+vue-electron-app/src/api/project.js
+  d66f19dbc9275772 10,17,19-20,47
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "bzl_git_version": "0.1.41",
+  "base_commit_sha": "3368e8ddacc69a74bcde6746ceb9f7a2efc1614e",
+  "prompts": {
+    "16f5182346549e3e": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "2dbc51de-0dc0-4589-9828-e56a3684101a",
+        "model": "gpt-5.6-terra-medium",
+        "ide": "cursor"
+      },
+      "human_author": "liqiang",
+      "transcript_path": "/Users/administrator/.cursor/projects/Users-administrator-code-aivideosound-vue-electron-app/agent-transcripts/2dbc51de-0dc0-4589-9828-e56a3684101a/2dbc51de-0dc0-4589-9828-e56a3684101a.jsonl",
+      "total_additions": 520,
+      "total_deletions": 0,
+      "accepted_lines": 5,
+      "overriden_lines": 0
+    },
+    "c467f3ee3973fbf0": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "d1c141f7-e472-40ff-9c94-ccacf063cf1b",
+        "model": "composer-2.5-fast",
+        "ide": "cursor"
+      },
+      "human_author": "liqiang",
+      "transcript_path": "/Users/administrator/.cursor/projects/Users-administrator-code-aivideosound-vue-electron-app/agent-transcripts/d1c141f7-e472-40ff-9c94-ccacf063cf1b/d1c141f7-e472-40ff-9c94-ccacf063cf1b.jsonl",
+      "total_additions": 6144,
+      "total_deletions": 0,
+      "accepted_lines": 75,
+      "overriden_lines": 0
+    },
+    "d567c678fcfad080": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "d1c141f7-e472-40ff-9c94-ccacf063cf1b",
+        "model": "gpt-5.6-terra-medium",
+        "ide": "cursor"
+      },
+      "human_author": "liqiang",
+      "transcript_path": "/Users/administrator/.cursor/projects/Users-administrator-code-aivideosound-vue-electron-app/agent-transcripts/d1c141f7-e472-40ff-9c94-ccacf063cf1b/d1c141f7-e472-40ff-9c94-ccacf063cf1b.jsonl",
+      "total_additions": 15074,
+      "total_deletions": 0,
+      "accepted_lines": 45,
+      "overriden_lines": 0
+    },
+    "d66f19dbc9275772": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "9cb80497-c990-4f54-bd50-966b12541136",
+        "model": "gpt-5.6-terra-medium",
+        "ide": "cursor"
+      },
+      "human_author": "liqiang",
+      "transcript_path": "/Users/administrator/.cursor/projects/Users-administrator-code-aivideosound-vue-electron-app/agent-transcripts/9cb80497-c990-4f54-bd50-966b12541136/9cb80497-c990-4f54-bd50-966b12541136.jsonl",
+      "total_additions": 27340,
+      "total_deletions": 0,
+      "accepted_lines": 149,
+      "overriden_lines": 0
+    }
+  }
+}
