@@ -1,0 +1,30 @@
+vue-electron-app/src/views/QuickVideoTranslateView.vue
+  e800d977705145c8 34,169-175
+vue-electron-app/src/views/QuickVideoTranslateTasksView.vue
+  e800d977705145c8 1-682
+vue-electron-app/src/api/project.js
+  e800d977705145c8 84-94
+vue-electron-app/src/router/index.js
+  e800d977705145c8 30-35
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "bzl_git_version": "0.1.41",
+  "base_commit_sha": "1e12bbbdb48309ec41b3130fa6e795f6ee153f75",
+  "prompts": {
+    "e800d977705145c8": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "282269f2-1606-4b04-883c-f4236bd71a43",
+        "model": "grok-4.7",
+        "ide": "cursor"
+      },
+      "human_author": "liqiang",
+      "transcript_path": "/Users/administrator/.cursor/projects/Users-administrator-code-aivideosound-vue-electron-app/agent-transcripts/282269f2-1606-4b04-883c-f4236bd71a43/282269f2-1606-4b04-883c-f4236bd71a43.jsonl",
+      "total_additions": 4028,
+      "total_deletions": 0,
+      "accepted_lines": 707,
+      "overriden_lines": 0
+    }
+  }
+}
