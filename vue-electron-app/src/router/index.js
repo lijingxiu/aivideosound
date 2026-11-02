@@ -30,6 +30,12 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+    path: '/quick-video-translate/:id/tasks',
+    name: 'quick-video-translate-tasks',
+    component: () => import('../views/QuickVideoTranslateTasksView.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
     path: '/video-translate',
     name: 'video-translate',
     component: () => import('../views/HomeView.vue'),

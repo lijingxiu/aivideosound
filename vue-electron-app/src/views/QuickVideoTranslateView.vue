@@ -31,7 +31,7 @@
               <td>{{ project.backgroundRemoval }}</td>
               <td>{{ project.subtitleErasure }}</td>
               <td :title="project.expireTime">{{ project.remaining }}</td>
-              <td><a class="action-enter" href="#" @click.prevent="notifyComingSoon">进入</a></td>
+              <td><a class="action-enter" href="#" @click.prevent="enterProject(project)">进入</a></td>
             </tr>
             <tr v-if="!projects.length">
               <td :colspan="columns.length" class="empty-row">暂无项目</td>
@@ -166,6 +166,13 @@ export default {
     },
     notifyComingSoon() {
       this.$message.info('新增项目功能后续开放')
+    },
+    enterProject(project) {
+      this.$router.push({
+        name: 'quick-video-translate-tasks',
+        params: { id: project.id },
+        query: { name: project.name }
+      })
     }
   }
 }

@@ -81,6 +81,17 @@ export function deleteTranslationDictionary(ids) {
   })
 }
 
+export function fetchDubFastList({ projectId, name = '', state = '', orderType = '' } = {}) {
+  const params = new URLSearchParams({
+    token: getProjectToken(),
+    projectId: String(projectId)
+  })
+  if (name) params.set('name', name)
+  if (state !== '') params.set('state', String(state))
+  if (orderType !== '') params.set('orderType', String(orderType))
+  return request(`/DubFast/GetListByProjectId?${params.toString()}`)
+}
+
 export function deleteProject(id) {
   return request(`/DubProject/Delete?token=${encodeURIComponent(getProjectToken())}`, {
     method: 'POST',
