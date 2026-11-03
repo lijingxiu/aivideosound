@@ -7,16 +7,18 @@
         :src="video.objectUrl"
         class="video-preview__video"
         @loadedmetadata="onLoaded"
+        @loadeddata="updateVideoRect"
         @timeupdate="onTimeUpdate"
       />
       <div v-else class="video-preview__empty">暂无预览</div>
 
-      <SubtitleSelectBox
-        v-if="showSelectBox"
-        :value="localRegion"
-        :label="selectLabel"
-        @input="localRegion = $event"
-      />
+      <div v-if="showSelectBox && videoRect" class="video-preview__overlay" :style="overlayStyle">
+        <SubtitleSelectBox
+          :value="localRegion"
+          :label="selectLabel"
+          @input="localRegion = $event"
+        />
+      </div>
     </div>
 
     <div class="video-preview__controls">
@@ -54,13 +56,24 @@ export default {
     return {
       playing: false,
       currentTime: 0,
-      duration: 0
+      duration: 0,
+      videoRect: null
     }
   },
   computed: {
     localRegion: {
       get() { return this.region },
       set(val) { this.$emit('update:region', val) }
+    },
+    overlayStyle() {
+      if (!this.videoRect) return {}
+      const { left, top, width, height } = this.videoRect
+      return {
+        left: `${left}px`,
+        top: `${top}px`,
+        width: `${width}px`,
+        height: `${height}px`
+      }
     },
     progressPercent() {
       if (!this.duration) return 0
@@ -72,12 +85,38 @@ export default {
       this.playing = false
       this.currentTime = 0
       this.duration = this.video?.duration || 0
+      this.videoRect = null
+      this.$nextTick(this.updateVideoRect)
     }
+  },
+  mounted() {
+    window.addEventListener('resize', this.updateVideoRect)
+  },
+  beforeDestroy() {
+    window.removeEventListener('resize', this.updateVideoRect)
   },
   methods: {
     formatDuration,
     onLoaded() {
       this.duration = this.$refs.videoRef?.duration || this.video?.duration || 0
+      this.updateVideoRect()
+    },
+    updateVideoRect() {
+      const video = this.$refs.videoRef
+      const screen = this.$refs.previewRef
+      if (!video || !screen || !video.videoWidth || !video.videoHeight) {
+        this.videoRect = null
+        return
+      }
+      const screenRect = screen.getBoundingClientRect()
+      const videoRect = video.getBoundingClientRect()
+      // 视频在容器内以等比缩放居中显示，用实际渲染尺寸作为选择框的边界。
+      this.videoRect = {
+        left: videoRect.left - screenRect.left,
+        top: videoRect.top - screenRect.top,
+        width: videoRect.width,
+        height: videoRect.height
+      }
     },
     onTimeUpdate() {
       this.currentTime = this.$refs.videoRef?.currentTime || 0
@@ -128,6 +167,11 @@ export default {
     max-width: 100%;
     max-height: 100%;
     display: block;
+  }
+
+  &__overlay {
+    position: absolute;
+    overflow: hidden;
   }
 
   &__empty {
