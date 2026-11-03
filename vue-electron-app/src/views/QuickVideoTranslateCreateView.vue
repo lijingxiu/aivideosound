@@ -13,7 +13,7 @@
       <VideoPreview v-if="videos.length" :video="activeVideo"
                     :show-select-box="subtitleSource === 'ocr' || subtitleErase"
                     :select-label="subtitleErase ? '拖动调整擦除位置' : '请框选字幕区域（对所有视频有效）'"
-                    :region="region" @update:region="region = $event"/>
+                    :region="region" :subtitle-preview="subtitlePreview" @update:region="region = $event"/>
       <section class="settings">
         <label class="project-name-row">项目名称
           <el-input v-model.trim="projectName" maxlength="20" placeholder="请输入"
@@ -82,7 +82,7 @@
               <div class="segment-setting-row"><span>去除背景音 <el-tooltip content="生成翻译视频时是否要去除源视频中的音效和背景音乐" placement="top"><i class="setting-info">i</i></el-tooltip></span><el-radio-group v-model="backgroundAudio"><el-radio label="keep">不去除</el-radio><el-radio label="music">仅去除背景音</el-radio><el-radio label="all">去除背景音及音效</el-radio></el-radio-group></div>
               <div class="segment-setting-row"><span>源字幕擦除</span><el-switch v-model="subtitleErase" active-color="#ed6200"/></div>
               <div class="segment-setting-row"><span>新字幕压制</span><el-switch v-model="burnSubtitle" active-color="#ed6200"/></div>
-              <SubtitleBurnSettings v-if="burnSubtitle" :key="targetLanguage" ref="subtitleBurnSettings" :font-list="targetFontList"/>
+              <SubtitleBurnSettings v-if="burnSubtitle" :key="targetLanguage" ref="subtitleBurnSettings" :font-list="targetFontList" @input="subtitleBurnSettings = $event"/>
             </el-tab-pane>
             <el-tab-pane label="AI音色库" name="library"><AiVoiceLibrary v-model="selectedVoice" :language-id="targetLanguageId" :language-name="targetLanguageName"/></el-tab-pane>
           </el-tabs>
@@ -176,7 +176,8 @@ export default {
     subtitleSources: SUBTITLE_SOURCES,
     projectInfo: null,
     dictionarySettings: { enabled: false, entries: [], selected: [] },
-    selectedVoice: null
+    selectedVoice: null,
+    subtitleBurnSettings: null
   }),
   created() {
     this.loadProjectInfo()
@@ -217,6 +218,13 @@ export default {
     },
     targetLanguageName() {
       return this.targetLanguages.find(item => item.code === this.targetLanguage)?.name || ''
+    },
+    subtitlePreview() {
+      const settings = this.subtitleBurnSettings
+      if (!this.burnSubtitle || !settings?.font || !settings?.size) return null
+      const language = this.targetLanguages.find(item => item.code === this.targetLanguage)
+      if (!language?.demoSubtitle) return null
+      return { ...settings, text: language.demoSubtitle }
     },
     subtitleMatchList() {
       return this.videos.map(video => ({

@@ -49,7 +49,7 @@ export default {
       strokeColor: '#ed6200',
       strokeWidth: 1,
       bgColor: '#ed6200',
-      position: 24
+      position: 10
     }
   }),
   computed: {
@@ -61,6 +61,12 @@ export default {
     }
   },
   watch: {
+    settings: {
+      deep: true,
+      handler(settings) {
+        this.$emit('input', { ...settings })
+      }
+    },
     fontList: {
       immediate: true,
       handler(fontList) {

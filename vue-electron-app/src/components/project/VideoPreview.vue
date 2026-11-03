@@ -19,6 +19,9 @@
           @input="localRegion = $event"
         />
       </div>
+      <div v-if="subtitlePreview && videoRect" class="video-preview__subtitle-layer" :style="subtitleLayerStyle">
+        <span class="video-preview__subtitle" :style="subtitleTextStyle">{{ subtitlePreview.text }}</span>
+      </div>
     </div>
 
     <div class="video-preview__controls">
@@ -49,7 +52,8 @@ export default {
     region: {
       type: Object,
       default: () => ({ x: 0.1, y: 0.65, w: 0.8, h: 0.2 })
-    }
+    },
+    subtitlePreview: { type: Object, default: null }
   },
   emits: ['update:region'],
   data() {
@@ -78,6 +82,42 @@ export default {
     progressPercent() {
       if (!this.duration) return 0
       return (this.currentTime / this.duration) * 100
+    },
+    subtitleLayerStyle() {
+      if (!this.videoRect) return {}
+      return {
+        left: `${this.videoRect.left}px`,
+        top: `${this.videoRect.top}px`,
+        width: `${this.videoRect.width}px`,
+        height: `${this.videoRect.height}px`
+      }
+    },
+    subtitleTextStyle() {
+      const settings = this.subtitlePreview || {}
+      const scale = this.videoRect?.width ? this.videoRect.width / 1080 : 1
+      const fontSize = (Number(settings.size) || 32) * scale
+      const style = {
+        fontFamily: settings.font || 'sans-serif',
+        fontSize: `${fontSize}px`,
+        color: settings.color || '#fff',
+        fontWeight: settings.bold ? 'bold' : 'normal'
+      }
+      if (settings.background === 'outline') {
+        const width = Math.max(1, (Number(settings.strokeWidth) || 1) * scale)
+        const color = settings.strokeColor || '#000'
+        style.textShadow = Array.from({ length: 16 }, (_, index) => {
+          const angle = (Math.PI * 2 * index) / 16
+          return `${Math.cos(angle) * width}px ${Math.sin(angle) * width}px 0 ${color}`
+        }).join(', ')
+      } else if (settings.background === 'background') {
+        style.backgroundColor = settings.bgColor
+        style.padding = `${4 * scale}px ${8 * scale}px`
+      }
+      // position 表示字幕底部距画面底部的百分比距离。
+      const position = Math.min(Math.max(Number(settings.position) || 0, 0), 100)
+      const offset = (this.videoRect?.height || 0) * (position / 100)
+      style.marginBottom = `${Math.min(offset, Math.max(0, (this.videoRect?.height || 0) - fontSize * 1.5))}px`
+      return style
     }
   },
   watch: {
@@ -172,6 +212,23 @@ export default {
   &__overlay {
     position: absolute;
     overflow: hidden;
+  }
+
+  &__subtitle-layer {
+    position: absolute;
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    pointer-events: none;
+  }
+
+  &__subtitle {
+    max-width: 90%;
+    padding: 2px 4px;
+    line-height: 1.3;
+    text-align: center;
+    white-space: nowrap;
+    align-self: flex-end;
   }
 
   &__empty {
