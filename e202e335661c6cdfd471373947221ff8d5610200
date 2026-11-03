@@ -1,0 +1,28 @@
+vue-electron-app/src/views/QuickVideoTranslateCreateView.vue
+  2e70e8f3662be1e4 16,85,179-180,222-228
+vue-electron-app/src/components/project/VideoPreview.vue
+  2e70e8f3662be1e4 22-24,55-56,85-120,217-233
+vue-electron-app/src/components/project/SubtitleBurnSettings.vue
+  2e70e8f3662be1e4 52,64-69
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "bzl_git_version": "0.1.43",
+  "base_commit_sha": "e202e335661c6cdfd471373947221ff8d5610200",
+  "prompts": {
+    "2e70e8f3662be1e4": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "78e4b98b-b7d8-43e2-a7b2-1616a4ed6e5c",
+        "model": "grok-4.7",
+        "ide": "cursor"
+      },
+      "human_author": "liqiang",
+      "transcript_path": "/Users/administrator/.cursor/projects/Users-administrator-code-aivideosound-vue-electron-app/agent-transcripts/78e4b98b-b7d8-43e2-a7b2-1616a4ed6e5c/78e4b98b-b7d8-43e2-a7b2-1616a4ed6e5c.jsonl",
+      "total_additions": 15231,
+      "total_deletions": 0,
+      "accepted_lines": 76,
+      "overriden_lines": 0
+    }
+  }
+}
