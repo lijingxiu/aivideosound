@@ -171,7 +171,12 @@ export default {
       this.$router.push({
         name: 'quick-video-translate-tasks',
         params: { id: project.id },
-        query: { name: project.name }
+        query: {
+          name: project.name,
+          fromLangName: project.sourceLanguage,
+          destLangName: project.targetLanguage,
+          expireTime: project.expireTime
+        }
       })
     }
   }

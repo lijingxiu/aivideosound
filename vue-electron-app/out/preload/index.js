@@ -15,5 +15,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
     writeTempFile: (data) => ipcRenderer.invoke('write-temp-file', data),
     readFileBytes: (filePath) => ipcRenderer.invoke('read-file-bytes', filePath),
     removeTempFiles: (paths) => ipcRenderer.invoke('remove-temp-files', paths),
-    uploadOssFile: (data) => ipcRenderer.invoke('upload-oss-file', data)
+    uploadOssFile: (data) => ipcRenderer.invoke('upload-oss-file', data),
+    getFontsDir: () => ipcRenderer.invoke('get-fonts-dir'),
+    openExportFolder: (projectId) => ipcRenderer.invoke('open-export-folder', projectId),
+    exportBurnVideo: (data, onDownloaded) => {
+        const listener = (_event, taskId) => {
+            if (String(taskId) === String(data.taskId)) {
+                ipcRenderer.removeListener('export-download-complete', listener)
+                onDownloaded?.()
+            }
+        }
+        ipcRenderer.on('export-download-complete', listener)
+        return ipcRenderer.invoke('export-burn-video', data).finally(() => ipcRenderer.removeListener('export-download-complete', listener))
+    }
 })

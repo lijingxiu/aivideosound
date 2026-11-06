@@ -92,8 +92,15 @@ export function fetchDubFastList({ projectId, name = '', state = '', orderType =
   return request(`/DubFast/GetListByProjectId?${params.toString()}`)
 }
 
-export function deleteProject(id) {
-  return request(`/DubProject/Delete?token=${encodeURIComponent(getProjectToken())}`, {
+export function deleteDubFast(ids) {
+  const idStr = Array.isArray(ids) ? ids.join(',') : String(ids)
+  return request(`/DubFast/Delete?token=${encodeURIComponent(getProjectToken())}`, {
+    method: 'POST',
+    body: JSON.stringify({ ids: idStr })
+  })
+}
+
+export function deleteProject(id) {  return request(`/DubProject/Delete?token=${encodeURIComponent(getProjectToken())}`, {
     method: 'POST',
     body: JSON.stringify({ id })
   })
