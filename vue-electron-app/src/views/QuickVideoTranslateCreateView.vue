@@ -11,7 +11,7 @@
       <VideoListPanel v-else :videos="videos" :active-id="activeId" @upload="openVideoPicker"
                       @select="activeId = $event" @remove="removeVideo"/>
       <VideoPreview v-if="videos.length" :video="activeVideo"
-                    :show-select-box="subtitleSource === 'ocr' || subtitleErase"
+                    :show-select-box="(translationMode === 'smart' && subtitleSource === 'ocr') || subtitleErase"
                     :select-label="subtitleErase ? '拖动调整擦除位置' : '请框选字幕区域（对所有视频有效）'"
                     :region="region" :subtitle-preview="subtitlePreview" @update:region="region = $event"/>
       <section class="settings">
@@ -33,17 +33,36 @@
         </div>
         <div class="setting-block">
           <div>翻译设置</div>
-          <el-tabs v-model="subtitleSource" type="border-card" class="subtitle-tabs">
-            <el-tab-pane v-for="s in subtitleSources" :key="s.value" :name="s.value">
+          <el-tabs v-model="translationMode" type="border-card" class="subtitle-tabs">
+            <el-tab-pane name="smart">
               <span slot="label">
-                <el-tooltip :content="s.tooltip" placement="top">
-                  <span>{{ s.label }}<small v-if="s.tag">（{{ s.tag }}）</small></span>
+                <el-tooltip content="10积分/分钟，使用AI大模型智能翻译字幕" placement="top">
+                  <span>智能翻译</span>
                 </el-tooltip>
               </span>
-              <div v-if="subtitleSource !== 'upload'" class="segment-settings">
+              <div class="subtitle-source-row">
+                <span>源字幕来源</span>
+                <el-tabs v-model="subtitleSource" type="border-card" class="source-tabs">
+                  <el-tab-pane v-for="s in subtitleSources.filter(item => item.value !== 'upload')" :key="s.value" :name="s.value">
+                    <span slot="label">
+                      <el-tooltip :content="s.tooltip" placement="top">
+                        <span>{{ s.label }}<small v-if="s.tag">（{{ s.tag }}）</small></span>
+                      </el-tooltip>
+                    </span>
+                  </el-tab-pane>
+                </el-tabs>
+              </div>
+              <div class="segment-settings">
                 <TranslationDictionary :source-language="sourceLanguage" :target-language="targetLanguage" :languages="languages" :shared-state="dictionarySettings"/>
               </div>
-              <div v-if="subtitleSource === 'upload'" class="subtitle-upload-panel">
+            </el-tab-pane>
+            <el-tab-pane name="upload">
+              <span slot="label">
+                <el-tooltip :content="uploadSubtitleTooltip" placement="top">
+                  <span>上传翻译字幕</span>
+                </el-tooltip>
+              </span>
+              <div class="subtitle-upload-panel">
                 <div class="subtitle-folder" @click="openSubtitlePicker">
                   <input
                     ref="subtitleInput" type="file" multiple hidden accept=".srt"
@@ -75,19 +94,55 @@
         </div>
         <div class="setting-block dubbing-block">
           <div class="dubbing-title">配音设置 <el-switch v-model="dubbingEnabled" active-color="#ed6200" inactive-color="#d9d9d9"/></div>
-          <el-tabs v-model="dubbingTab" type="border-card" class="subtitle-tabs">
-            <el-tab-pane label="原声克隆" name="clone">
+          <el-tabs v-if="dubbingEnabled" v-model="dubbingTab" type="border-card" class="subtitle-tabs">
+            <el-tab-pane name="clone">
+              <span slot="label">
+                <el-tooltip content="120积分/分钟，精准复刻每个角色的音色、情感" placement="top">
+                  <span>原声克隆</span>
+                </el-tooltip>
+              </span>
               <div class="segment-setting-row"><span>视频时长动态调整 <el-tooltip content="开启后，将适当延长视频时长，以达到最佳配音效果" placement="top"><i class="setting-info">i</i></el-tooltip></span><el-switch v-model="durationAdjust" active-color="#ed6200"/></div>
               <div class="segment-setting-row"><span>译文字幕时间戳动态调整 <el-tooltip content="开启后，将适当调整译文字幕时间戳信息，均衡配音语速，以达到最佳配音效果" placement="top"><i class="setting-info">i</i></el-tooltip></span><el-switch v-model="timestampAdjust" active-color="#ed6200"/></div>
-              <div class="segment-setting-row"><span>去除背景音 <el-tooltip content="生成翻译视频时是否要去除源视频中的音效和背景音乐" placement="top"><i class="setting-info">i</i></el-tooltip></span><el-radio-group v-model="backgroundAudio"><el-radio label="keep">不去除</el-radio><el-radio label="music">仅去除背景音</el-radio><el-radio label="all">去除背景音及音效</el-radio></el-radio-group></div>
-              <div class="segment-setting-row"><span>源字幕擦除</span><el-switch v-model="subtitleErase" active-color="#ed6200"/></div>
-              <div class="segment-setting-row"><span>新字幕压制</span><el-switch v-model="burnSubtitle" active-color="#ed6200"/></div>
-              <SubtitleBurnSettings v-if="burnSubtitle" :key="targetLanguage" ref="subtitleBurnSettings" :font-list="targetFontList" @input="subtitleBurnSettings = $event"/>
             </el-tab-pane>
-            <el-tab-pane label="AI音色库" name="library"><AiVoiceLibrary v-model="selectedVoice" :language-id="targetLanguageId" :language-name="targetLanguageName"/></el-tab-pane>
+            <el-tab-pane name="library">
+              <span slot="label">
+                <el-tooltip content="20积分/分钟，根据选择的AI音色配音" placement="top">
+                  <span>AI音色库</span>
+                </el-tooltip>
+              </span>
+              <div class="segment-setting-row"><span>视频时长动态调整 <el-tooltip content="开启后，将适当延长视频时长，以达到最佳配音效果" placement="top"><i class="setting-info">i</i></el-tooltip></span><el-switch v-model="durationAdjust" active-color="#ed6200"/></div>
+              <div class="segment-setting-row"><span>译文字幕时间戳动态调整 <el-tooltip content="开启后，将适当调整译文字幕时间戳信息，均衡配音语速，以达到最佳配音效果" placement="top"><i class="setting-info">i</i></el-tooltip></span><el-switch v-model="timestampAdjust" active-color="#ed6200"/></div>
+              <div class="voice-library-selector"><AiVoiceLibrary v-model="selectedVoice" :language-id="targetLanguageId" :language-name="targetLanguageName"/></div>
+            </el-tab-pane>
           </el-tabs>
         </div>
-        <div class="estimate">积分消耗预估：<b>{{ totalPoints }}</b></div>
+        <div class="dubbing-title other-settings-title">其它设置</div>
+        <section class="output-settings">
+          <div class="output-settings__audio">
+            <div class="output-settings__label">去除背景音
+              <el-tooltip content="生成翻译视频时是否要去除源视频中的音效和背景音乐" placement="top"><i class="setting-info">i</i></el-tooltip>
+            </div>
+            <el-radio-group v-model="backgroundAudio" class="output-settings__audio-options">
+              <el-radio label="keep">不去除</el-radio>
+              <el-radio label="music">仅去除背景音</el-radio>
+              <el-radio label="all">去除背景音及音效</el-radio>
+            </el-radio-group>
+          </div>
+          <div class="output-settings__row">
+            <span>源字幕擦除</span>
+            <el-switch v-model="subtitleErase" active-color="#ed6200"/>
+          </div>
+          <div class="output-settings__row">
+            <span>新字幕压制</span>
+            <el-switch v-model="burnSubtitle" active-color="#ed6200"/>
+          </div>
+          <div v-if="burnSubtitle" class="output-settings__subtitle">
+            <SubtitleBurnSettings :key="targetLanguage" ref="subtitleBurnSettings" :font-list="targetFontList" @input="subtitleBurnSettings = $event"/>
+          </div>
+        </section>
+        <button type="button" class="estimate" @click="pointsDetailVisible = true">
+          <span>积分消耗预估：<b>{{ totalPoints }}</b></span><span class="estimate-arrow" aria-hidden="true">›</span>
+        </button>
         <button class="submit" :disabled="!videos.length" @click="submit">提交</button>
       </section>
     </div>
@@ -127,6 +182,23 @@
         </div>
       </div>
     </div>
+    <div v-if="pointsDetailVisible" class="custom-modal-mask" @click.self="pointsDetailVisible = false">
+      <div class="custom-modal points-detail-modal">
+        <div class="custom-modal-head">
+          <span>积分消耗明细</span>
+          <button type="button" class="custom-modal-close" @click="pointsDetailVisible = false">✕</button>
+        </div>
+        <div class="points-detail-body">
+          <div class="points-detail-tip">每个视频单独计费，每30秒为1个计费单位，不足30秒按30秒计算</div>
+          <div class="points-detail-divider"></div>
+          <div v-for="item in pointDetails" :key="item.label" class="points-detail-row">
+            <span>{{ item.label }}</span><b>{{ item.points }}积分</b>
+          </div>
+          <div v-if="!pointDetails.length" class="points-detail-empty">请先上传视频</div>
+          <div class="points-detail-note">当前积分消耗仅为预估，最终以实际消耗为准</div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 <script>
@@ -140,7 +212,7 @@ import SubtitleBurnSettings from '@/components/project/SubtitleBurnSettings.vue'
 import AiVoiceLibrary from '@/components/project/AiVoiceLibrary.vue';
 import {SUBTITLE_SOURCES, MAX_VIDEO_COUNT} from '@/constants/project';
 import {validateVideoFile, naturalSort, getFileExt, getBaseName} from '@/utils/videoValidator';
-import {calcTotalPoints} from '@/utils/pointsCalculator';
+import {calcTotalPoints, calcVideoPointDetails} from '@/utils/pointsCalculator';
 import {fetchProjectInfo, getOriginalUploadPolicy, submitProjectTask} from '@/api/project'
 
 export default {
@@ -149,6 +221,7 @@ export default {
     projectName: '',
     sourceLanguage: '',
     targetLanguage: '',
+    translationMode: 'smart',
     subtitleSource: 'asr',
     dubbingEnabled: true,
     dubbingTab: 'clone',
@@ -167,6 +240,7 @@ export default {
     selectedSubtitleContent: '',
     subtitleMatchVisible: false,
     subtitlePreviewVisible: false,
+    pointsDetailVisible: false,
     region: {x: .1, y: .65, w: .8, h: .2},
     submitting: false,
     step: 0,
@@ -183,8 +257,20 @@ export default {
     this.loadProjectInfo()
   },
   watch: {
-    targetLanguage() {
+    targetLanguage(value, oldValue) {
       this.selectedVoice = null
+      if (!oldValue || value === oldValue) return
+      this.subtitleFiles = []
+      this.subtitleFolder = ''
+      this.selectedSubtitleName = ''
+      this.selectedSubtitleContent = ''
+      this.subtitlePreviewVisible = false
+      this.dictionarySettings = {enabled: false, entries: [], selected: []}
+      this.$message({
+        message: '目标语言已更改，上传的翻译字幕/AI音色/翻译词典已清空，请重新选择',
+        type: 'warning',
+        duration: 3000
+      })
     }
   },
   beforeDestroy() {
@@ -197,13 +283,37 @@ export default {
       return this.videos.find(v => v.id === this.activeId) || this.videos[0]
     }, totalPoints() {
       return calcTotalPoints(this.videos, {
-        subtitleSource: this.subtitleSource,
+        subtitleSource: this.translationSource,
         dubbingEnabled: this.dubbingEnabled,
         dubbingTab: this.dubbingTab,
         backgroundAudio: this.backgroundAudio,
         subtitleErase: this.subtitleErase,
         pointConfig: this.projectInfo?.pointConfig
       })
+    },
+    pointDetails() {
+      const settings = {
+        subtitleSource: this.translationSource,
+        dubbingEnabled: this.dubbingEnabled,
+        dubbingTab: this.dubbingTab,
+        backgroundAudio: this.backgroundAudio,
+        subtitleErase: this.subtitleErase,
+        pointConfig: this.projectInfo?.pointConfig
+      }
+      return this.videos.reduce((summary, video) => {
+        calcVideoPointDetails(video, settings).forEach(item => {
+          const existing = summary.find(detail => detail.label === item.label)
+          if (existing) existing.points += item.points
+          else summary.push({...item})
+        })
+        return summary
+      }, [])
+    },
+    translationSource() {
+      return this.translationMode === 'upload' ? 'upload' : this.subtitleSource
+    },
+    uploadSubtitleTooltip() {
+      return this.subtitleSources.find(item => item.value === 'upload')?.tooltip || ''
     },
     languages() {
       return [...this.sourceLanguages, ...this.targetLanguages]
@@ -444,6 +554,7 @@ export default {
       }
     },
     async uploadVideo(video) {
+      if (video.uploadedOriginal) return {...video.uploadedOriginal}
       const media = await this.splitVideo(video)
       try {
         const videoKey = await this.uploadFileWithPolicy(media.muteFile, getFileExt(video.name), media.paths.mutePath)
@@ -455,7 +566,7 @@ export default {
         } finally {
           await window.electronAPI?.removeTempFiles?.([thumb.tempPath])
         }
-        return {
+        const uploadedOriginal = {
           name: video.name,
           videoMuteUrl: videoKey,
           audioUrl: audioKey,
@@ -464,6 +575,8 @@ export default {
           videoSize: Math.floor((Number(video.size) || media.muteFile.size || 0) / (1024 * 1024)),
           srtUrl: ''
         }
+        this.$set(video, 'uploadedOriginal', uploadedOriginal)
+        return {...uploadedOriginal}
       } finally {
         await window.electronAPI?.removeTempFiles?.([media.paths.mutePath, media.paths.audioPath])
       }
@@ -538,8 +651,8 @@ export default {
       if (!this.sourceLanguage) return this.$alert('请选择源语言', '提示', {type: 'warning'});
       if (!this.targetLanguage) return this.$alert('请选择目标语言', '提示', {type: 'warning'});
       if (this.sourceLanguage === this.targetLanguage) return this.$alert('源语言和目标语言不能相同', '提示', {type: 'warning'});
-      if (this.subtitleSource === 'upload' && !this.subtitleFiles.length) return this.$alert('请选择字幕文件所在位置', '提示', {type: 'warning'});
-      if (this.subtitleSource === 'upload') {
+      if (this.translationSource === 'upload' && !this.subtitleFiles.length) return this.$alert('请选择字幕文件所在位置', '提示', {type: 'warning'});
+      if (this.translationSource === 'upload') {
         const unmatchedVideos = this.subtitleMatchList
           .filter(item => !item.subtitle)
           .map(item => item.video.name)
@@ -558,7 +671,13 @@ export default {
         this.step = 1
         for (const video of this.videos) {
           const item = await this.uploadVideo(video)
-          if (this.subtitleSource === 'upload') item.srtUrl = await this.uploadSubtitle(video)
+          if (this.subtitleSource === 'upload') {
+            if (!video.uploadedSubtitleUrl) {
+              const subtitleUrl = await this.uploadSubtitle(video)
+              this.$set(video, 'uploadedSubtitleUrl', subtitleUrl)
+            }
+            item.srtUrl = video.uploadedSubtitleUrl || ''
+          }
           originalList.push(item)
         }
 
@@ -585,9 +704,9 @@ export default {
           name: this.projectName,
           fromLangCode: this.sourceLanguage,
           destLangCode: this.targetLanguage,
-          transType: this.subtitleSource === 'upload' ? 2 : 1,
-          ...(this.subtitleSource !== 'upload' ? {subtitleType: {asr: 1, ocr: 2}[this.subtitleSource]} : {}),
-          ...(this.subtitleSource !== 'upload' ? {transDictType: this.dictionarySettings.enabled ? 1 : 0} : {}),
+          transType: this.translationSource === 'upload' ? 2 : 1,
+          ...(this.translationSource !== 'upload' ? {subtitleType: {asr: 1, ocr: 2}[this.subtitleSource]} : {}),
+          ...(this.translationSource !== 'upload' ? {transDictType: this.dictionarySettings.enabled ? 1 : 0} : {}),
           dubType: this.dubbingEnabled ? (this.dubbingTab === 'clone' ? 1 : 3) : 0,
           dubVideoAdjust: this.dubbingEnabled && this.durationAdjust ? 1 : 0,
           dubAudioAdjust: this.dubbingEnabled && this.timestampAdjust ? 1 : 0,
@@ -1018,14 +1137,136 @@ export default {
   word-break: break-word;
 }
 
+.output-settings {
+  margin-top: 0;
+  padding: 15px;
+  border: 1px solid #dcdfe6;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, .1);
+  border-radius: 8px;
+}
+
+.output-settings__audio {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 44px;
+}
+
+.output-settings__label,
+.output-settings__row {
+  display: flex;
+  align-items: center;
+  color: #333;
+  font-size: 13px;
+}
+
+.output-settings__audio-options {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+  margin-top: 0;
+
+  ::v-deep .el-radio {
+    margin-right: 0;
+  }
+
+  ::v-deep .el-radio__label {
+    padding-left: 5px;
+    font-size: 12px;
+  }
+}
+
+.output-settings__row {
+  justify-content: space-between;
+  min-height: 44px;
+}
+
+.output-settings__subtitle {
+  ::v-deep .burn {
+    border-color: #dcdfe6;
+  }
+}
+
 .estimate {
-  text-align: center;
-  margin-top: 30px
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 0;
+  margin-top: 30px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.estimate > span:first-child {
+  display: inline-flex;
+  align-items: center;
+  line-height: 30px;
 }
 
 .estimate b {
   color: #ff7a00;
-  margin-left: 8px
+  margin-left: 8px;
+  line-height: 30px;
+}
+
+.estimate-arrow {
+  display: inline-flex;
+  align-items: center;
+  height: 30px;
+  color: #ed6200;
+  font-size: 30px;
+  font-weight: 600;
+  line-height: 30px;
+  transform: translateY(-3px);
+}
+
+.points-detail-modal {
+  width: 420px;
+}
+
+.points-detail-body {
+  padding: 0 24px 24px;
+}
+
+.points-detail-tip {
+  color: #222;
+  font-size: 16px;
+  line-height: 1.55;
+}
+
+.points-detail-divider {
+  height: 1px;
+  margin: 14px 0 20px;
+  background: #222;
+}
+
+.points-detail-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 9px 16px;
+  color: #222;
+  font-size: 15px;
+}
+
+.points-detail-row b {
+  font-weight: 400;
+}
+
+.points-detail-note,
+.points-detail-empty {
+  padding: 8px 16px 0;
+  color: #999;
+  font-size: 13px;
+}
+
+.points-detail-empty {
+  text-align: center;
 }
 
 .submit {
@@ -1066,7 +1307,92 @@ export default {
   overflow: hidden;
 }
 
+.subtitle-tabs ::v-deep .el-tabs__header {
+  margin-bottom: 12px;
+  background: #f7f7f9;
+  border: 0;
+}
+
+.subtitle-tabs ::v-deep .el-tabs__nav-wrap::after {
+  display: none;
+}
+
+.subtitle-tabs ::v-deep .el-tabs__item {
+  height: 36px;
+  padding: 0 28px;
+  border: 0;
+  color: #999;
+  line-height: 36px;
+}
+
+.subtitle-tabs ::v-deep .el-tabs__item.is-active {
+  border: 0;
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, .1);
+  color: #333;
+}
+
+.subtitle-source-row {
+  display: flex;
+  align-items: center;
+  min-height: 42px;
+  gap: 18px;
+  color: #333;
+  font-size: 14px;
+}
+
+.source-tabs {
+  flex: 0 0 auto;
+  width: max-content;
+  overflow: hidden;
+}
+
+.source-tabs ::v-deep .el-tabs__header {
+  margin: 0;
+  background: #f7f7f9;
+  border: 0;
+}
+
+.source-tabs ::v-deep .el-tabs__nav-wrap::after {
+  display: none;
+}
+
+.source-tabs ::v-deep .el-tabs__nav {
+  border: 0;
+}
+
+.source-tabs ::v-deep .el-tabs__item {
+  height: 36px;
+  min-width: 112px;
+  padding: 0 14px;
+  border: 0;
+  color: #888;
+  line-height: 36px;
+  text-align: center;
+}
+
+.source-tabs ::v-deep .el-tabs__item.is-active {
+  border: 0;
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, .1);
+  color: #333;
+}
+
+.source-tabs ::v-deep .el-tabs__content {
+  display: none;
+}
+
+.source-tabs small {
+  font-size: 12px;
+}
+
 .dubbing-block {
+  margin-top: 18px;
+}
+
+.other-settings-title {
   margin-top: 18px;
 }
 
@@ -1077,6 +1403,14 @@ export default {
   margin-bottom: 10px;
   color: #333;
   font-size: 14px;
+}
+
+.dubbing-block .subtitle-tabs ::v-deep .el-tabs__header {
+  margin-bottom: 4px;
+}
+
+.voice-library-selector {
+  margin-top: 12px;
 }
 
 .dubbing-block .segment-setting-row {

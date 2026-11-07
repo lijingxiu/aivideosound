@@ -18,6 +18,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     uploadOssFile: (data) => ipcRenderer.invoke('upload-oss-file', data),
     getFontsDir: () => ipcRenderer.invoke('get-fonts-dir'),
     openExportFolder: (projectId) => ipcRenderer.invoke('open-export-folder', projectId),
+    checkExportedVideo: (data) => ipcRenderer.invoke('check-exported-video', data),
     exportBurnVideo: (data, onDownloaded) => {
         const listener = (_event, taskId) => {
             if (String(taskId) === String(data.taskId)) {

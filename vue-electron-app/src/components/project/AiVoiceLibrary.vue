@@ -81,7 +81,7 @@ export default {
       if (this.playingId === speaker.id) { audio.pause(); this.playingId = null; return }
       audio.src = speaker.auditionUrl; audio.play().then(() => { this.playingId = speaker.id }).catch(() => this.$message?.warning('试听播放失败'))
     },
-    selectSpeaker(speaker) { this.selectedSpeaker = speaker; this.$emit('input', speaker); this.$emit('select', speaker) },
+    selectSpeaker(speaker) { this.selectedSpeaker = speaker; this.$emit('input', speaker); this.$emit('select', speaker); this.close() },
     ageLabel(age) { return ({ 1: '少年', 2: '青年', 3: '中年', 4: '老年' })[age] || '—' },
     handleScroll(event) { const el = event.target; if (el.scrollTop + el.clientHeight >= el.scrollHeight - 40 && !this.loading && this.speakers.length) this.loadList() }
   }

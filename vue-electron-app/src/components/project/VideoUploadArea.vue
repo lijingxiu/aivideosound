@@ -16,7 +16,7 @@
     <p class="upload-area__title">请选择视频文件，或将其拖放到这里</p>
     <p class="upload-area__highlight">支持批量上传</p>
     <p class="upload-area__highlight">按文件名称智能排序</p>
-    <p class="upload-area__limit">单次最多100个文件 | 单个视频 ≤4G | ≤120分钟</p>
+    <p class="upload-area__limit">单次最多100个文件 | 单个视频 ≤2G | ≤60分钟</p>
   </div>
 </template>
 

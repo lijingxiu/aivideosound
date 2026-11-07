@@ -100,7 +100,22 @@ export function deleteDubFast(ids) {
   })
 }
 
-export function deleteProject(id) {  return request(`/DubProject/Delete?token=${encodeURIComponent(getProjectToken())}`, {
+export function updateFastProjectInfo(payload) {
+  return request(`/DubFastProject/UpdateInfo?token=${encodeURIComponent(getProjectToken())}`, {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  })
+}
+
+export function deleteFastProject(id) {
+  return request(`/DubFastProject/Delete?token=${encodeURIComponent(getProjectToken())}`, {
+    method: 'POST',
+    body: JSON.stringify({ id })
+  })
+}
+
+export function deleteProject(id) {
+  return request(`/DubProject/Delete?token=${encodeURIComponent(getProjectToken())}`, {
     method: 'POST',
     body: JSON.stringify({ id })
   })

@@ -51,13 +51,11 @@
                 <input v-model="allSelected" type="checkbox" aria-label="全选">
               </th>
               <th class="name-cell">名称</th>
-              <th>导出状态</th>
-              <th>源语言</th>
-              <th>目标语言</th>
-              <th>提取</th>
               <th>翻译</th>
+              <th>导出状态</th>
+              <th>字幕擦除</th>
               <th>状态</th>
-              <th>有效期剩余</th>
+              <th>创建时间</th>
               <th class="action-cell">操作</th>
             </tr>
             </thead>
@@ -77,22 +75,21 @@
                 </div>
               </td>
               <td>
+                <span class="status-pill" :class="stateOf(transStates, task.transState).type">
+                  <i></i>{{ stateOf(transStates, task.transState).label }}
+                </span>
+              </td>
+              <td>
                 <span class="export-status" :class="exportStates[task.id]?.type">
                   {{ exportStates[task.id]?.label || '待导出' }}
+                  <i v-if="exportStates[task.id]?.type === 'running'" class="export-spinner" aria-label="正在处理"></i>
                   <button v-if="exportStates[task.id]?.type === 'fail' && !exporting" class="retry-button" @click="retryExport(task.id)">重试</button>
                 </span>
                 <small v-if="exportStates[task.id]?.reason" class="export-reason">{{ exportStates[task.id].reason }}</small>
               </td>
-              <td>{{ sourceLanguageName || '—' }}</td>
-              <td>{{ targetLanguageName || '—' }}</td>
               <td>
-                <span class="status-pill" :class="stateOf(transStates, task.extractState ?? task.subtitleState ?? task.asrState).type">
-                  <i></i>{{ stateOf(transStates, task.extractState ?? task.subtitleState ?? task.asrState).label }}
-                </span>
-              </td>
-              <td>
-                <span class="status-pill" :class="stateOf(transStates, task.transState).type">
-                  <i></i>{{ stateOf(transStates, task.transState).label }}
+                <span class="status-pill" :class="stateOf(eraseStates, task.eraseState).type">
+                  <i></i>{{ stateOf(eraseStates, task.eraseState).label }}
                 </span>
               </td>
               <td>
@@ -100,7 +97,7 @@
                   <i></i>{{ stateOf(overallStates, task.state).label }}
                 </span>
               </td>
-              <td>{{ remainingDays() }}</td>
+              <td>{{ formatCreateTime(task.createTime) }}</td>
               <td class="actions">
                 <button :disabled="exporting" @click="exportTask(task)">导出</button>
                 <button @click="deleteTask(task)">删除</button>
@@ -109,12 +106,12 @@
             </tbody>
             <tbody v-else-if="loading">
             <tr>
-              <td colspan="10" class="empty-state"><span class="loader"></span>正在加载任务...</td>
+              <td colspan="8" class="empty-state"><span class="loader"></span>正在加载任务...</td>
             </tr>
             </tbody>
             <tbody v-else>
             <tr>
-              <td colspan="10" class="empty-state">
+              <td colspan="7" class="empty-state">
                 <span class="empty-icon">□</span>
                 <strong>{{ errorMessage ? '任务加载失败' : '暂无译制任务' }}</strong>
                 <small>{{ errorMessage ? '请稍后重试' : '创建译制任务后，相关内容会显示在这里' }}</small>
@@ -135,7 +132,7 @@
             <div v-for="item in exportQueue" :key="item.id" class="export-row">
               <span class="export-name" :title="item.name">{{ item.name }}</span>
               <span class="export-value" :class="item.type">
-                <span class="export-label">{{ item.label }}</span>
+                <span class="export-label">{{ item.label }}<i v-if="item.type === 'running'" class="export-spinner" aria-label="正在处理"></i></span>
                 <button v-if="item.type === 'fail'" class="retry-button" :disabled="exportRunning" @click="retryExport(item.id)">重试</button>
                 <small v-if="item.reason" class="export-reason">{{ item.reason }}</small>
               </span>
@@ -186,6 +183,13 @@ export default {
         1: {label: '成功', type: 'success'},
         2: {label: '失败', type: 'fail'}
       },
+      eraseStates: {
+        '-2': {label: '不擦除', type: 'disabled'},
+        '-1': {label: '未开始', type: 'pending'},
+        0: {label: '进行中', type: 'running'},
+        1: {label: '成功', type: 'success'},
+        2: {label: '失败', type: 'fail'}
+      },
       overallStates: {
         '-1': {label: '未开始', type: 'pending'},
         0: {label: '进行中', type: 'running'},
@@ -231,6 +235,14 @@ export default {
     clearTimeout(this.searchTimer)
   },
   methods: {
+    formatCreateTime(value) {
+      const timestamp = Number(value)
+      if (!Number.isFinite(timestamp) || timestamp <= 0) return '—'
+      const date = new Date(timestamp < 1e12 ? timestamp * 1000 : timestamp)
+      if (Number.isNaN(date.getTime())) return '—'
+      const pad = number => String(number).padStart(2, '0')
+      return `${date.getFullYear()}/${pad(date.getMonth() + 1)}/${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`
+    },
     stateOf(map, value) {
       return map[value] || {label: '未开始', type: 'pending'}
     },
@@ -282,12 +294,31 @@ export default {
         })
         this.tasks = response?.data?.data?.list || response?.data?.list || response?.list || []
         this.selectedIds = []
+        await this.loadExportStates()
       } catch (error) {
         this.tasks = []
         this.errorMessage = error.message || '任务列表加载失败'
       } finally {
         this.loading = false
       }
+    },
+    async loadExportStates() {
+      const api = window.electronAPI
+      if (!api?.checkExportedVideo) return
+      await Promise.all(this.tasks.map(async task => {
+        try {
+          const result = await api.checkExportedVideo({
+            taskId: task.id,
+            projectId: this.projectId,
+            materialName: task.name || String(task.id)
+          })
+          this.$set(this.exportStates, task.id, result?.exists
+            ? {label: '完成', type: 'success', reason: ''}
+            : {label: '待导出', type: '', reason: ''})
+        } catch (error) {
+          this.$set(this.exportStates, task.id, {label: '待导出', type: '', reason: ''})
+        }
+      }))
     },
     remainingDays() {
       const expiry = this.projectExpireTime
@@ -723,6 +754,18 @@ input[type='checkbox'] {
 .export-status {
   display: block;
   color: #667085;
+}
+
+.export-spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin-left: 6px;
+  vertical-align: -2px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
 }
 
 .export-status.running {

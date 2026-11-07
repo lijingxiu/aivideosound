@@ -7,7 +7,7 @@
     "build": "vue-cli-service build",
     "server": "node server/index.js",
     "electron:serve": "cross-env NODE_ENV=development electron .",
-    "electron:build": "electron-builder"
+    "electron:build": "npm run build && node -e \"const {execFileSync}=require('child_process'); execFileSync(require('ffmpeg-static'),['-version'],{stdio:'ignore'}); console.log('[ffmpeg] binary OK')\" && chmod +x node_modules/ffmpeg-static/ffmpeg && cross-env ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/ CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --mac dmg --x64"
   },
   "build": {
     "appId": "com.example.myapp",
@@ -24,12 +24,29 @@
       "public/fonts/**"
     ],
     "win": {
-      "target": "nsis",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
       "icon": "build/icon.ico"
     },
     "mac": {
-      "target": "dmg",
-      "icon": "build/icon.icns"
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.icns",
+      "identity": null,
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false
     }
   },
   "main": "./out/main/main.js",

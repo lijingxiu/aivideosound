@@ -16,17 +16,32 @@ console.log('[启动] 诊断信息:', {
     resourcesPath: process.resourcesPath,
     logPath
 });
-const { existsSync, mkdirSync, readFileSync, writeFileSync, copyFile, unlink, rmSync, statSync, createReadStream } = require('fs');
+const { existsSync, mkdirSync, readFileSync, writeFileSync, copyFile, unlink, rmSync, statSync, createReadStream, chmodSync } = require('fs');
 const { spawn } = require('child_process');
 const ffmpegStaticPath = require('ffmpeg-static');
 
+// 打包/拷贝过程中 ffmpeg 的执行位可能丢失（表现为 spawn EACCES），启动时自愈一次。
+function ensureExecutable(filePath) {
+    try {
+        if (!filePath || !existsSync(filePath)) return;
+        if (statSync(filePath).mode & 0o111) return;
+        chmodSync(filePath, 0o755);
+        console.log('[FFmpeg] 已补上可执行权限:', filePath);
+    } catch (error) {
+        console.error('[FFmpeg] 补可执行权限失败:', { filePath, error });
+    }
+}
+
 function resolveFfmpegPath() {
-    if (!ffmpegStaticPath) throw new Error('未安装 ffmpeg-static');
+    if (!ffmpegStaticPath) throw new Error(`未找到 FFmpeg 可执行文件: ${process.platform}/${process.arch}`);
     const candidates = [
         String(ffmpegStaticPath).replace(/app\.asar([\\/])/, 'app.asar.unpacked$1'),
         ffmpegStaticPath
     ];
-    return candidates.find(candidate => existsSync(candidate)) || ffmpegStaticPath;
+    const resolved = candidates.find(candidate => candidate && existsSync(candidate));
+    if (!resolved) throw new Error(`未找到 FFmpeg 可执行文件: ${process.platform}/${process.arch}`);
+    ensureExecutable(resolved);
+    return resolved;
 }
 
 const ffmpegPath = resolveFfmpegPath();
@@ -149,10 +164,25 @@ function resolveFontsDir(fontsDir) {
 }
 
 ipcMain.handle('get-fonts-dir', () => resolveFontsDir(''));
+function getExportOutputPath(projectId, materialName, taskId) {
+    const projectDir = join(app.getPath('userData'), String(projectId));
+    const exportDir = join(projectDir, 'export');
+    const id = String(taskId).replace(/[^\w.-]/g, '_');
+    const safeMaterialName = String(materialName || id).replace(/[\\/:*?"<>|]/g, '_').replace(/\.[^.]+$/, '') || id;
+    const outputPath = join(exportDir, `${safeMaterialName}-export.mp4`);
+    console.log('[导出] 输出路径:', outputPath);
+    return outputPath;
+}
+
 ipcMain.handle('open-export-folder', (_event, projectId) => {
     const dir = join(app.getPath('userData'), String(projectId), 'export');
     mkdirSync(dir, { recursive: true });
     return shell.openPath(dir);
+});
+
+ipcMain.handle('check-exported-video', (_event, { taskId, projectId, materialName }) => {
+    const outputPath = getExportOutputPath(projectId, materialName, taskId);
+    return { exists: existsSync(outputPath), path: outputPath };
 });
 
 ipcMain.handle('export-burn-video', async (event, payload) => {
@@ -206,8 +236,7 @@ async function exportBurnVideo(event, { taskId, projectId, materialName, videoUr
     const videoPath = join(dir, `${id}${extFromUrl(videoUrl, '.mp4')}`);
     const audioPath = join(dir, `${id}${extFromUrl(audioUrl, '.mp3')}`);
     const subtitlePath = join(dir, `${id}${extFromUrl(subtitleUrl, '.ass')}`);
-    const safeMaterialName = String(materialName || id).replace(/[\\/:*?"<>|]/g, '_').replace(/\.[^.]+$/, '') || id;
-    const outputPath = join(exportDir, `${safeMaterialName}-export.mp4`);
+    const outputPath = getExportOutputPath(projectId, materialName, taskId);
     if (existsSync(outputPath)) {
         console.log('[导出] 已存在导出视频，直接标记成功:', outputPath);
         return { path: outputPath, alreadyExported: true };
@@ -279,8 +308,8 @@ async function exportBurnVideo(event, { taskId, projectId, materialName, videoUr
 
 function createWindow() {
     const mainWindow = new BrowserWindow({
-        width: 1200,
-        height: 800,
+        width: 1600,
+        height: 1200,
         webPreferences: {
             preload: join(__dirname, '../preload/index.js'),
             nodeIntegration: true,

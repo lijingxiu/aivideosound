@@ -43,10 +43,10 @@ export default {
     settings: {
       font: '',
       size: 32,
-      color: '#ed6200',
+      color: '#ffffff',
       bold: false,
       background: 'outline',
-      strokeColor: '#ed6200',
+      strokeColor: '#000000',
       strokeWidth: 1,
       bgColor: '#ed6200',
       position: 10
@@ -109,15 +109,29 @@ export default {
 }
 
 .style-controls {
-  flex-wrap: wrap;
+  justify-content: flex-start;
+  flex-wrap: nowrap;
+  gap: 16px;
 }
 
 .style-color {
   gap: 8px !important;
 }
 
+.style-controls .stroke-width {
+  margin-left: 0;
+}
+
+.background-control ::v-deep .el-radio {
+  margin-right: 2px;
+}
+
+.background-control ::v-deep .el-radio__label {
+  padding-left: 2px;
+}
+
 .stroke-width ::v-deep .el-select {
-  width: 64px;
+  width: 48px;
 }
 
 .position-control {

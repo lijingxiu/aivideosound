@@ -24,10 +24,10 @@ export function validateVideoFile(video) {
     errors.push('格式不支持')
   }
   if (video.size > MAX_VIDEO_SIZE) {
-    errors.push('已超过4G')
+    errors.push('已超过2G')
   }
   if (video.duration > MAX_VIDEO_DURATION) {
-    errors.push('已超过120分钟')
+    errors.push('已超过60分钟')
   }
   if (video.duration > 0 && video.duration < MIN_VIDEO_DURATION) {
     errors.push('时长不足10秒')

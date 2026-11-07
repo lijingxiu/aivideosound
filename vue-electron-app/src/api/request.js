@@ -1,4 +1,5 @@
 import { API_BASE_URL } from '@/config'
+import { Message } from 'element-ui'
 
 class ApiError extends Error {
   constructor(message, code, status) {
@@ -25,11 +26,25 @@ async function request(url, options = {}) {
   }
 
   if (!response.ok) {
-    throw new ApiError(
+    const error = new ApiError(
       data?.message || `请求失败 (${response.status})`,
       data?.code,
       response.status
     )
+    Message.error(error.message)
+    error.messageShown = true
+    throw error
+  }
+
+  if (data?.code !== 200) {
+    const error = new ApiError(
+      data?.message || '请求失败',
+      data?.code,
+      response.status
+    )
+    Message.error(error.message)
+    error.messageShown = true
+    throw error
   }
 
   return data
