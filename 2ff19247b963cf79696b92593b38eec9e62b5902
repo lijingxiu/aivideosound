@@ -1,0 +1,61 @@
+vue-electron-app/src/components/project/AiVoiceLibrary.vue
+  3b289d9ca6937e2c 5,9-10,13-15
+vue-electron-app/src/constants/project.js
+  8f5d3545b795e290 4,36
+vue-electron-app/src/utils/videoValidator.js
+  8f5d3545b795e290 27
+vue-electron-app/src/components/project/VideoUploadArea.vue
+  8f5d3545b795e290 19
+vue-electron-app/out/main/main.js
+  6d088dd47505b648 281
+vue-electron-app/src/views/QuickVideoTranslateCreateView.vue
+  3b289d9ca6937e2c 109,123,132,284-289,296,306
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "bzl_git_version": "0.1.48",
+  "base_commit_sha": "2ff19247b963cf79696b92593b38eec9e62b5902",
+  "prompts": {
+    "3b289d9ca6937e2c": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "f9cdda27-d3f1-40af-ac3a-e7a648fb2596",
+        "model": "grok-4.7",
+        "ide": "cursor"
+      },
+      "human_author": "liqiang05",
+      "transcript_path": "/Users/administrator/.cursor/projects/Users-administrator-code-aivideosound-vue-electron-app/agent-transcripts/f9cdda27-d3f1-40af-ac3a-e7a648fb2596/f9cdda27-d3f1-40af-ac3a-e7a648fb2596.jsonl",
+      "total_additions": 545,
+      "total_deletions": 46,
+      "accepted_lines": 17,
+      "overriden_lines": 0
+    },
+    "6d088dd47505b648": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "874e00cb-260b-4241-9985-f008a9ef6721",
+        "model": "gpt-5.6-terra-medium",
+        "ide": "cursor"
+      },
+      "human_author": "liqiang05",
+      "transcript_path": "/Users/administrator/.cursor/projects/Users-administrator-code-aivideosound-vue-electron-app/agent-transcripts/874e00cb-260b-4241-9985-f008a9ef6721/874e00cb-260b-4241-9985-f008a9ef6721.jsonl",
+      "total_additions": 450,
+      "total_deletions": 0,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    },
+    "8f5d3545b795e290": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "1932dc83-e390-49f6-aa8e-836eed9e8dcf",
+        "model": "grok-4.7",
+        "ide": "cursor"
+      },
+      "human_author": "liqiang05",
+      "total_additions": 4,
+      "total_deletions": 4,
+      "accepted_lines": 4,
+      "overriden_lines": 0
+    }
+  }
+}
