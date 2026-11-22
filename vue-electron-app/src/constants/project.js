@@ -1,7 +1,7 @@
 export const SUPPORTED_VIDEO_EXT = ['mp4', 'avi', 'mov', 'wmv', 'mkv', 'flv', 'ts']
 export const SUPPORTED_CODECS = ['h264', 'h265', 'hevc', 'avc']
 export const MAX_VIDEO_COUNT = 100
-export const MAX_VIDEO_SIZE = 2 * 1024 * 1024 * 1024
+export const MAX_VIDEO_SIZE = 1 * 1024 * 1024 * 1024
 export const MIN_VIDEO_DURATION = 10
 export const MAX_VIDEO_DURATION = 60 * 60
 
@@ -33,4 +33,4 @@ export const POINTS_PER_30S = {
   subtitleErase: 100
 }
 
-export const UPLOAD_TOOLTIP = '单次任务不能超过100个视频，单个视频限制：≤2G，≥10秒，≤60分钟'
+export const UPLOAD_TOOLTIP = '单次任务不能超过100个视频，单个视频限制：≤1G，≥10秒，≤60分钟'

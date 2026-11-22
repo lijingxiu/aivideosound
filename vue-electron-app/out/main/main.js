@@ -278,7 +278,7 @@ async function exportBurnVideo(event, { taskId, projectId, materialName, videoUr
     const resolvedFontsDir = resolveFontsDir(fontsDir);
     const escapedFontsDir = resolvedFontsDir ? escapeFilterPath(resolvedFontsDir) : '';
     const filter = `[0:v]noise=alls=2:allf=t,eq=brightness=0.003:contrast=1.002,scale=iw+4:ih+4,crop=iw-4:ih-4:2:2,subtitles=filename=${escapedSubtitle}${escapedFontsDir ? `:fontsdir=${escapedFontsDir}` : ''}[vout]`;
-    const args = ['-hide_banner', '-v', 'info', '-stats', '-y', '-i', videoPath, '-i', audioPath, '-filter_complex', filter, '-map', '[vout]', '-c:v', 'libx264', '-crf', '22', '-preset', 'faster', '-map', '1:a', '-c:a', 'copy', '-map_metadata', '-1', outputPath];
+    const args = ['-hide_banner', '-v', 'info', '-stats', '-y', '-allow_sw', '1', '-i', videoPath, '-i', audioPath, '-filter_complex', filter, '-map', '[vout]', '-c:v', 'libx264', '-crf', '22', '-preset', 'faster', '-map', '1:a', '-c:a', 'copy', '-map_metadata', '-1', outputPath];
     console.log('[导出] 开始压制:', { taskId, command: ffmpegPath, args, outputPath });
     await new Promise((resolve, reject) => {
         const child = spawn(ffmpegPath, args);

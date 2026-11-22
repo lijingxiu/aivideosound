@@ -102,16 +102,16 @@
                 </el-tooltip>
               </span>
               <div class="segment-setting-row"><span>视频时长动态调整 <el-tooltip content="开启后，将适当延长视频时长，以达到最佳配音效果" placement="top"><i class="setting-info">i</i></el-tooltip></span><el-switch v-model="durationAdjust" active-color="#ed6200"/></div>
-              <div class="segment-setting-row"><span>译文字幕时间戳动态调整 <el-tooltip content="开启后，将适当调整译文字幕时间戳信息，均衡配音语速，以达到最佳配音效果" placement="top"><i class="setting-info">i</i></el-tooltip></span><el-switch v-model="timestampAdjust" active-color="#ed6200"/></div>
+              <div class="segment-setting-row"><span>配音时间轴动态调整 <el-tooltip content="开启后，将适当调整配音时间轴信息，均衡配音语速，以达到最佳配音效果（音画必须严格对齐的请关闭）" placement="top"><i class="setting-info">i</i></el-tooltip></span><el-switch v-model="timestampAdjust" active-color="#ed6200"/></div>
             </el-tab-pane>
             <el-tab-pane name="library">
               <span slot="label">
-                <el-tooltip content="20积分/分钟，根据选择的AI音色配音" placement="top">
+                <el-tooltip content="40积分/分钟，根据选择的AI音色配音" placement="top">
                   <span>AI音色库</span>
                 </el-tooltip>
               </span>
               <div class="segment-setting-row"><span>视频时长动态调整 <el-tooltip content="开启后，将适当延长视频时长，以达到最佳配音效果" placement="top"><i class="setting-info">i</i></el-tooltip></span><el-switch v-model="durationAdjust" active-color="#ed6200"/></div>
-              <div class="segment-setting-row"><span>译文字幕时间戳动态调整 <el-tooltip content="开启后，将适当调整译文字幕时间戳信息，均衡配音语速，以达到最佳配音效果" placement="top"><i class="setting-info">i</i></el-tooltip></span><el-switch v-model="timestampAdjust" active-color="#ed6200"/></div>
+              <div class="segment-setting-row"><span>配音时间轴动态调整 <el-tooltip content="开启后，将适当调整配音时间轴信息，均衡配音语速，以达到最佳配音效果（音画必须严格对齐的请关闭）" placement="top"><i class="setting-info">i</i></el-tooltip></span><el-switch v-model="timestampAdjust" active-color="#ed6200"/></div>
               <div class="voice-library-selector"><AiVoiceLibrary v-model="selectedVoice" :language-id="targetLanguageId" :language-name="targetLanguageName"/></div>
             </el-tab-pane>
           </el-tabs>
@@ -120,7 +120,7 @@
         <section class="output-settings">
           <div class="output-settings__audio">
             <div class="output-settings__label">去除背景音
-              <el-tooltip content="生成翻译视频时是否要去除源视频中的音效和背景音乐" placement="top"><i class="setting-info">i</i></el-tooltip>
+              <el-tooltip content="20积分/分钟，生成翻译视频时是否去除源视频中的音效和背景音乐" placement="top"><i class="setting-info">i</i></el-tooltip>
             </div>
             <el-radio-group v-model="backgroundAudio" class="output-settings__audio-options">
               <el-radio label="keep">不去除</el-radio>
@@ -129,7 +129,7 @@
             </el-radio-group>
           </div>
           <div class="output-settings__row">
-            <span>源字幕擦除</span>
+            <span>源字幕擦除 <el-tooltip content="200积分/分钟，智能擦除字幕，恢复原视频内容" placement="top"><i class="setting-info">i</i></el-tooltip></span>
             <el-switch v-model="subtitleErase" active-color="#ed6200"/>
           </div>
           <div class="output-settings__row">
@@ -281,14 +281,19 @@ export default {
   computed: {
     activeVideo() {
       return this.videos.find(v => v.id === this.activeId) || this.videos[0]
-    }, totalPoints() {
+    },
+    pointConfig() {
+      // 每30秒计费：AI音色库配音 20（40积分/分钟）、去除背景音 10（20积分/分钟）、源字幕擦除 100（200积分/分钟）
+      return {...this.projectInfo?.pointConfig, dubSelect: 20, removeBgAudio: 10, videoErasePro: 100}
+    },
+    totalPoints() {
       return calcTotalPoints(this.videos, {
         subtitleSource: this.translationSource,
         dubbingEnabled: this.dubbingEnabled,
         dubbingTab: this.dubbingTab,
         backgroundAudio: this.backgroundAudio,
         subtitleErase: this.subtitleErase,
-        pointConfig: this.projectInfo?.pointConfig
+        pointConfig: this.pointConfig
       })
     },
     pointDetails() {
@@ -298,7 +303,7 @@ export default {
         dubbingTab: this.dubbingTab,
         backgroundAudio: this.backgroundAudio,
         subtitleErase: this.subtitleErase,
-        pointConfig: this.projectInfo?.pointConfig
+        pointConfig: this.pointConfig
       }
       return this.videos.reduce((summary, video) => {
         calcVideoPointDetails(video, settings).forEach(item => {

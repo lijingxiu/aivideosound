@@ -2,15 +2,17 @@
   <div>
     <button type="button" class="voice-trigger" @click="openLibrary">
       <span v-if="selectedSpeaker">已选音色：{{ selectedSpeaker.name }}</span>
-      <span v-else>选择音色库</span>
+      <span v-else>从音色库中选择统一的AI音色</span>
       <span aria-hidden="true">›</span>
     </button>
     <div v-if="visible" class="voice-mask" @click.self="close">
-      <section class="voice-dialog" role="dialog" aria-modal="true" aria-label="选择音色库">
-        <header class="dialog-head"><strong>选择音色库</strong><button type="button" aria-label="关闭" @click="close">×</button></header>
+      <section class="voice-dialog" role="dialog" aria-modal="true" aria-label="AI音色库">
+        <header class="dialog-head"><strong>AI音色库</strong><button type="button" aria-label="关闭" @click="close">×</button></header>
         <div class="dialog-content">
           <nav class="voice-tabs"><button :class="{active: tab === 'all'}" @click="changeTab('all')">系统音色</button><button :class="{active: tab === 'fav'}" @click="changeTab('fav')">收藏音色</button></nav>
-          <div class="filter-head"><span>已为您筛选支持「{{ languageName || languageId || '目标语言' }}」的AI音色</span><label><input v-model="withMulti" type="checkbox" @change="loadList">叠加显示支持多语种的音色 <i title="仅显示支持多语种的音色">i</i></label></div>
+          <div class="filter-head"><span>已为您筛选支持「{{ languageName || languageId || '目标语言' }}」的AI音色</span><label><input v-model="withMulti" type="checkbox" @change="loadList">叠加显示支持多语种的音色 <el-tooltip content="当前语种对应音色较少时，可勾选叠加显示更多音色" placement="top">
+            <i>i</i>
+          </el-tooltip> </label></div>
           <div class="filters"><input v-model="keyword" placeholder="输入关键词搜索" @input="searchDebounced"><select v-model="gender" @change="loadList"><option value="">全部性别</option><option value="1">男</option><option value="2">女</option></select><select v-model="age" @change="loadList"><option value="">全部年龄</option><option value="1">少年</option><option value="2">青年</option><option value="3">中年</option><option value="4">老年</option></select></div>
           <div class="speaker-list" @scroll="handleScroll">
             <article v-for="speaker in speakers" :key="speaker.id" class="speaker-card">
