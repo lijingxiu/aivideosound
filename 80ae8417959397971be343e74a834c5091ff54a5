@@ -1,0 +1,38 @@
+vue-electron-app/vue.config.js
+  51ba4f4be4c329b6 3-8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "bzl_git_version": "0.1.48",
+  "base_commit_sha": "80ae8417959397971be343e74a834c5091ff54a5",
+  "prompts": {
+    "3b289d9ca6937e2c": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "f9cdda27-d3f1-40af-ac3a-e7a648fb2596",
+        "model": "grok-4.7",
+        "ide": "cursor"
+      },
+      "human_author": "liqiang05",
+      "transcript_path": "/Users/administrator/.cursor/projects/Users-administrator-code-aivideosound-vue-electron-app/agent-transcripts/f9cdda27-d3f1-40af-ac3a-e7a648fb2596/f9cdda27-d3f1-40af-ac3a-e7a648fb2596.jsonl",
+      "total_additions": 299,
+      "total_deletions": 80,
+      "accepted_lines": 0,
+      "overriden_lines": 0
+    },
+    "51ba4f4be4c329b6": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "644a0c4c-a520-436f-a182-b97993549bd5",
+        "model": "grok-4.7",
+        "ide": "cursor"
+      },
+      "human_author": "liqiang05",
+      "transcript_path": "/Users/administrator/.cursor/projects/Users-administrator-code-aivideosound-vue-electron-app/agent-transcripts/644a0c4c-a520-436f-a182-b97993549bd5/644a0c4c-a520-436f-a182-b97993549bd5.jsonl",
+      "total_additions": 566,
+      "total_deletions": 217,
+      "accepted_lines": 6,
+      "overriden_lines": 0
+    }
+  }
+}
