@@ -1,0 +1,114 @@
+vue-electron-app/src/views/QuickVideoTranslateTasksView.vue
+  e5872b36ea5f63f9 95-105,141-144,147-150,180,198,201,295-309,311-314,316,318-326,393,461-468,478-481,936-945,1072-1101,1123-1146
+  6321a251863c5675 165,292-294,401-407,412-418,432-438,505-509,912-915,1202-1205
+  b846c80aa33aca5e 7,10-13,15-18,56-57,59-60,79-83,90-91,116,125,130,187,213-218,220,241-250,269,274,327-330,332,334-338,592-593,644-661,663-665,667-668,673-692
+vue-electron-app/src/views/QuickVideoTranslateView.vue
+  a4c27f8ba6d8a9d7 20-40,54-56,59,129-132,135,138-139,157-158,161-162,189-190,193-194,211-218,407-461
+  b846c80aa33aca5e 147,307,310,312-318
+vue-electron-app/src/views/QuickVideoTranslateCreateView.vue
+  6321a251863c5675 107-115,118-119,296-298,762
+  e5872b36ea5f63f9 432-448,490-512,514,704-706,709-714,726
+  3b289d9ca6937e2c 16,254,366-372
+vue-electron-app/src/components/project/AiVoiceLibrary.vue
+  3b289d9ca6937e2c 22,67,74-83
+vue-electron-app/src/api/project.js
+  e5872b36ea5f63f9 103-109
+vue-electron-app/src/utils/pointsCalculator.js
+  6321a251863c5675 23-25
+vue-electron-app/src/api/request.js
+  e5872b36ea5f63f9 28-32,35,46
+vue-electron-app/src/components/project/SubtitleBurnSettings.vue
+  3b289d9ca6937e2c 31,76,80-84,89-108,175-176,179-183,186-195
+vue-electron-app/src/components/project/VideoPreview.vue
+  3b289d9ca6937e2c 58,97,100,160
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "bzl_git_version": "0.1.48",
+  "base_commit_sha": "ee856034541b4c3183613a92a2b676f8a125d765",
+  "prompts": {
+    "3b289d9ca6937e2c": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "f9cdda27-d3f1-40af-ac3a-e7a648fb2596",
+        "model": "grok-4.7",
+        "ide": "cursor"
+      },
+      "human_author": "liqiang05",
+      "transcript_path": "/Users/administrator/.cursor/projects/Users-administrator-code-aivideosound-vue-electron-app/agent-transcripts/f9cdda27-d3f1-40af-ac3a-e7a648fb2596/f9cdda27-d3f1-40af-ac3a-e7a648fb2596.jsonl",
+      "total_additions": 76,
+      "total_deletions": 14,
+      "accepted_lines": 69,
+      "overriden_lines": 4
+    },
+    "6321a251863c5675": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "1397d9a8-0cd0-45ac-80fe-ee09030c70bc",
+        "model": "grok-4.7",
+        "ide": "cursor"
+      },
+      "human_author": "liqiang05",
+      "transcript_path": "/Users/administrator/.cursor/projects/Users-administrator-code-aivideosound-vue-electron-app/agent-transcripts/1397d9a8-0cd0-45ac-80fe-ee09030c70bc/1397d9a8-0cd0-45ac-80fe-ee09030c70bc.jsonl",
+      "total_additions": 62,
+      "total_deletions": 17,
+      "accepted_lines": 56,
+      "overriden_lines": 0
+    },
+    "6377063e0bffa248": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "ea76a0d8-9fdf-496b-ad4e-9711582ead5e",
+        "model": "grok-4.7",
+        "ide": "cursor"
+      },
+      "human_author": "liqiang05",
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 0,
+      "overriden_lines": 0
+    },
+    "a4c27f8ba6d8a9d7": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "cd36b3d3-ea7a-46f2-b730-4dc227dd7ea7",
+        "model": "grok-4.7",
+        "ide": "cursor"
+      },
+      "human_author": "liqiang05",
+      "transcript_path": "/Users/administrator/.cursor/projects/Users-administrator-code-aivideosound-vue-electron-app/agent-transcripts/cd36b3d3-ea7a-46f2-b730-4dc227dd7ea7/cd36b3d3-ea7a-46f2-b730-4dc227dd7ea7.jsonl",
+      "total_additions": 114,
+      "total_deletions": 21,
+      "accepted_lines": 103,
+      "overriden_lines": 0
+    },
+    "b846c80aa33aca5e": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "ea76a0d8-9fdf-496b-ad4e-9711582ead5e",
+        "model": "gpt-5.6-terra-medium",
+        "ide": "cursor"
+      },
+      "human_author": "liqiang05",
+      "transcript_path": "/Users/administrator/.cursor/projects/Users-administrator-code-aivideosound-vue-electron-app/agent-transcripts/ea76a0d8-9fdf-496b-ad4e-9711582ead5e/ea76a0d8-9fdf-496b-ad4e-9711582ead5e.jsonl",
+      "total_additions": 196,
+      "total_deletions": 99,
+      "accepted_lines": 108,
+      "overriden_lines": 0
+    },
+    "e5872b36ea5f63f9": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "fe917744-b814-4192-9e29-64f66e8ce3c1",
+        "model": "gpt-5.6-terra-medium",
+        "ide": "cursor"
+      },
+      "human_author": "liqiang05",
+      "transcript_path": "/Users/administrator/.cursor/projects/Users-administrator-code-aivideosound-vue-electron-app/agent-transcripts/fe917744-b814-4192-9e29-64f66e8ce3c1/fe917744-b814-4192-9e29-64f66e8ce3c1.jsonl",
+      "total_additions": 199,
+      "total_deletions": 31,
+      "accepted_lines": 193,
+      "overriden_lines": 0
+    }
+  }
+}
