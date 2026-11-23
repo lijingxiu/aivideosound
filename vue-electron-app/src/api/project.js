@@ -100,6 +100,13 @@ export function deleteDubFast(ids) {
   })
 }
 
+export function retryDubFast(id) {
+  return request(`/DubFast/Retry?token=${encodeURIComponent(getProjectToken())}`, {
+    method: 'POST',
+    body: JSON.stringify({ id })
+  })
+}
+
 export function updateFastProjectInfo(payload) {
   return request(`/DubFastProject/UpdateInfo?token=${encodeURIComponent(getProjectToken())}`, {
     method: 'POST',

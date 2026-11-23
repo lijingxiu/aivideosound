@@ -13,7 +13,7 @@
       <VideoPreview v-if="videos.length" :video="activeVideo"
                     :show-select-box="(translationMode === 'smart' && subtitleSource === 'ocr') || subtitleErase"
                     :select-label="subtitleErase ? '拖动调整擦除位置' : '请框选字幕区域（对所有视频有效）'"
-                    :region="region" :subtitle-preview="subtitlePreview" @update:region="region = $event"/>
+                    :region="region" :subtitle-preview="subtitlePreview" @update:region="region = $event" @video-rect="onVideoRect"/>
       <section class="settings">
         <label class="project-name-row">项目名称
           <el-input v-model.trim="projectName" maxlength="20" placeholder="请输入"
@@ -104,10 +104,19 @@
               <div class="segment-setting-row"><span>视频时长动态调整 <el-tooltip content="开启后，将适当延长视频时长，以达到最佳配音效果" placement="top"><i class="setting-info">i</i></el-tooltip></span><el-switch v-model="durationAdjust" active-color="#ed6200"/></div>
               <div class="segment-setting-row"><span>配音时间轴动态调整 <el-tooltip content="开启后，将适当调整配音时间轴信息，均衡配音语速，以达到最佳配音效果（音画必须严格对齐的请关闭）" placement="top"><i class="setting-info">i</i></el-tooltip></span><el-switch v-model="timestampAdjust" active-color="#ed6200"/></div>
             </el-tab-pane>
+            <el-tab-pane name="match">
+              <span slot="label">
+                <el-tooltip content="60积分/分钟，根据每个角色的声音特点智能匹配合适的AI音色" placement="top">
+                  <span>智能匹配</span>
+                </el-tooltip>
+              </span>
+              <div class="segment-setting-row"><span>视频时长动态调整 <el-tooltip content="开启后，将适当延长视频时长，以达到最佳配音效果" placement="top"><i class="setting-info">i</i></el-tooltip></span><el-switch v-model="durationAdjust" active-color="#ed6200"/></div>
+              <div class="segment-setting-row"><span>配音时间轴动态调整 <el-tooltip content="开启后，将适当调整配音时间轴信息，均衡配音语速，以达到最佳配音效果（音画必须严格对齐的请关闭）" placement="top"><i class="setting-info">i</i></el-tooltip></span><el-switch v-model="timestampAdjust" active-color="#ed6200"/></div>
+            </el-tab-pane>
             <el-tab-pane name="library">
               <span slot="label">
-                <el-tooltip content="40积分/分钟，根据选择的AI音色配音" placement="top">
-                  <span>AI音色库</span>
+                <el-tooltip content="40积分/分钟，手动选择统一的AI音色" placement="top">
+                  <span>手动选择</span>
                 </el-tooltip>
               </span>
               <div class="segment-setting-row"><span>视频时长动态调整 <el-tooltip content="开启后，将适当延长视频时长，以达到最佳配音效果" placement="top"><i class="setting-info">i</i></el-tooltip></span><el-switch v-model="durationAdjust" active-color="#ed6200"/></div>
@@ -242,6 +251,7 @@ export default {
     subtitlePreviewVisible: false,
     pointsDetailVisible: false,
     region: {x: .1, y: .65, w: .8, h: .2},
+    regionHeightInit: false,
     submitting: false,
     step: 0,
     status: 'active',
@@ -283,8 +293,9 @@ export default {
       return this.videos.find(v => v.id === this.activeId) || this.videos[0]
     },
     pointConfig() {
-      // 每30秒计费：AI音色库配音 20（40积分/分钟）、去除背景音 10（20积分/分钟）、源字幕擦除 100（200积分/分钟）
-      return {...this.projectInfo?.pointConfig, dubSelect: 20, removeBgAudio: 10, videoErasePro: 100}
+      // 每30秒计费：原声克隆配音 60（120积分/分钟）、智能匹配音响优先取接口 dubMatch（默认30，即60积分/分钟）、手动选择配音 20（40积分/分钟）、去除背景音 10（20积分/分钟）、源字幕擦除 100（200积分/分钟）
+      const config = this.projectInfo?.pointConfig || {}
+      return {...config, dubSelect: 20, dubMatch: config.dubMatch ?? 30, removeBgAudio: 10, videoErasePro: 100}
     },
     totalPoints() {
       return calcTotalPoints(this.videos, {
@@ -352,6 +363,13 @@ export default {
     }
   },
   methods: {
+    onVideoRect(rect) {
+      if (this.regionHeightInit || !rect || !rect.height) return
+      // 选择框默认高度固定为 50px，换算成相对视频显示高度的比例
+      const h = Math.min(50 / rect.height, 1 - this.region.y)
+      this.region = {...this.region, h: Math.max(0.02, h)}
+      this.regionHeightInit = true
+    },
     openVideoPicker() {
       const picker = this.$refs.videoPicker
       if (!picker) return
@@ -411,6 +429,23 @@ export default {
         video.onerror = () => resolve(0)
       })
     },
+    async readVideoCodec(file) {
+      const api = window.electronAPI
+      if (api?.getVideoMetadata) {
+        const metadata = await api.getVideoMetadata(api.getFilePath?.(file) || file.path)
+        return metadata?.codec || metadata?.videoCodec || metadata?.codecName || ''
+      }
+      return file.codec || file.videoCodec || file.codecName || ''
+    },
+    async validateVideo(file, objectUrl) {
+      const duration = await this.readVideoDuration(objectUrl)
+      const codec = await this.readVideoCodec(file)
+      return {
+        duration,
+        codec,
+        errors: validateVideoFile({...file, duration, codec})
+      }
+    },
     createThumbnail(file, objectUrl) {
       return new Promise(resolve => {
         const video = document.createElement('video')
@@ -452,23 +487,31 @@ export default {
     },
     async addVideos(files) {
       if (this.videos.length + files.length > MAX_VIDEO_COUNT) return alert('单次任务不能超过100个视频');
-      const next = files.map((f, i) => {
-        const e = validateVideoFile(f);
-        if (e.length) {
-          alert(`${f.name}${e.join('，')}，请检查修改`);
-          return null
+      const next = []
+      for (const [index, file] of files.entries()) {
+        const objectUrl = URL.createObjectURL(file)
+        try {
+          const validation = await this.validateVideo(file, objectUrl)
+          if (validation.errors.length) {
+            URL.revokeObjectURL(objectUrl)
+            alert(`${file.name}${validation.errors.join('，')}，请检查修改`)
+            continue
+          }
+          next.push({
+            id: `${Date.now()}-${index}-${Math.random().toString(36).slice(2, 8)}`,
+            name: file.name,
+            size: file.size,
+            duration: validation.duration,
+            codec: validation.codec,
+            objectUrl,
+            thumbnail: '',
+            file
+          })
+        } catch (error) {
+          URL.revokeObjectURL(objectUrl)
+          alert(`${file.name}视频信息读取失败，请检查修改`)
         }
-        const objectUrl = URL.createObjectURL(f)
-        return {
-          id: `${Date.now()}-${i}-${Math.random().toString(36).slice(2, 8)}`,
-          name: f.name,
-          size: f.size,
-          duration: f.duration || 0,
-          objectUrl,
-          thumbnail: '',
-          file: f
-        }
-      }).filter(Boolean);
+      }
       this.videos = [...this.videos, ...next].sort(naturalSort);
       if (!this.activeId) this.activeId = this.videos[0]?.id || ''
 
@@ -658,12 +701,16 @@ export default {
       if (this.sourceLanguage === this.targetLanguage) return this.$alert('源语言和目标语言不能相同', '提示', {type: 'warning'});
       if (this.translationSource === 'upload' && !this.subtitleFiles.length) return this.$alert('请选择字幕文件所在位置', '提示', {type: 'warning'});
       if (this.translationSource === 'upload') {
-        const unmatchedVideos = this.subtitleMatchList
-          .filter(item => !item.subtitle)
-          .map(item => item.video.name)
-        if (unmatchedVideos.length) {
-          return this.$alert(`以下视频没有匹配的字幕文件：\n${unmatchedVideos.join('\n')}`, '字幕未匹配', {type: 'warning'})
+        const unmatchedVideo = this.subtitleMatchList.find(item => !item.subtitle)
+        if (unmatchedVideo) {
+          return this.$alert(`${unmatchedVideo.video.name}找不到目标语言为${this.targetLanguageName}的字幕文件`, '字幕未匹配', {type: 'warning'})
         }
+      }
+      if (this.dubbingEnabled && this.dubbingTab === 'library' && !this.selectedVoice) {
+        return this.$alert('请选择AI音色', '提示', {type: 'warning'})
+      }
+      if (!this.dubbingEnabled && !this.burnSubtitle) {
+        return this.$alert('配音与字幕压制不能同时关闭', '提示', {type: 'warning'})
       }
       try {
         // const r = await fetchUserPoints();
@@ -676,7 +723,7 @@ export default {
         this.step = 1
         for (const video of this.videos) {
           const item = await this.uploadVideo(video)
-          if (this.subtitleSource === 'upload') {
+          if (this.translationSource === 'upload') {
             if (!video.uploadedSubtitleUrl) {
               const subtitleUrl = await this.uploadSubtitle(video)
               this.$set(video, 'uploadedSubtitleUrl', subtitleUrl)
@@ -712,7 +759,7 @@ export default {
           transType: this.translationSource === 'upload' ? 2 : 1,
           ...(this.translationSource !== 'upload' ? {subtitleType: {asr: 1, ocr: 2}[this.subtitleSource]} : {}),
           ...(this.translationSource !== 'upload' ? {transDictType: this.dictionarySettings.enabled ? 1 : 0} : {}),
-          dubType: this.dubbingEnabled ? (this.dubbingTab === 'clone' ? 1 : 3) : 0,
+          dubType: this.dubbingEnabled ? (this.dubbingTab === 'clone' ? 1 : this.dubbingTab === 'match' ? 2 : 3) : 0,
           dubVideoAdjust: this.dubbingEnabled && this.durationAdjust ? 1 : 0,
           dubAudioAdjust: this.dubbingEnabled && this.timestampAdjust ? 1 : 0,
           removeBgAudio: {keep: 0, music: 1, all: 2}[this.backgroundAudio],

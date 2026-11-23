@@ -25,9 +25,14 @@ async function request(url, options = {}) {
     data = null
   }
 
+  const responseError = data?.error
+  const responseMessage = typeof responseError === 'string'
+    ? responseError
+    : responseError?.message || data?.message
+
   if (!response.ok) {
     const error = new ApiError(
-      data?.message || `请求失败 (${response.status})`,
+      responseMessage || `请求失败 (${response.status})`,
       data?.code,
       response.status
     )
@@ -38,7 +43,7 @@ async function request(url, options = {}) {
 
   if (data?.code !== 200) {
     const error = new ApiError(
-      data?.message || '请求失败',
+      responseMessage || '请求失败',
       data?.code,
       response.status
     )

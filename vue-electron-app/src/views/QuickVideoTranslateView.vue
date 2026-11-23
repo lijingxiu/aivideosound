@@ -17,7 +17,27 @@
         <table class="data-table">
           <thead>
             <tr>
-              <th v-for="column in columns" :key="column.key">{{ column.label }}</th>
+              <th>项目名称</th>
+              <th>源语言</th>
+              <th>目标语言</th>
+              <th>素材数量</th>
+              <th>翻译方式</th>
+              <th>配音</th>
+              <th>去除背景音</th>
+              <th>字幕压制</th>
+              <th>字幕擦除</th>
+              <th>
+                <span class="th-tip-wrap">
+                  有效期剩余
+                  <span class="tip-icon" tabindex="0" aria-label="有效期说明">
+                    i
+                    <span class="tip-bubble">{{ expireTip }}</span>
+                  </span>
+                </span>
+              </th>
+              <th>创建时间</th>
+              <th>备注</th>
+              <th>操作</th>
             </tr>
           </thead>
           <tbody>
@@ -31,8 +51,12 @@
               <td>{{ project.targetLanguage }}</td>
               <td>{{ project.materialCount }}</td>
               <td :title="project.translationDetail">{{ project.translation }}</td>
+              <td :title="project.voiceoverDetail">{{ project.voiceover }}</td>
+              <td :title="project.backgroundRemovalDetail">{{ project.backgroundRemoval }}</td>
+              <td>{{ project.burnSubtitle }}</td>
               <td>{{ project.subtitleErasure }}</td>
               <td :title="project.expireTime">{{ project.remaining }}</td>
+              <td>{{ project.createTime }}</td>
               <td :title="project.remark">{{ project.remark || '-' }}</td>
               <td>
                 <div class="row-actions">
@@ -43,8 +67,8 @@
                             @click.stop="toggleProjectMenu(project.id)">···</button>
                     <div v-if="activeProjectMenu === project.id" class="more-menu" @click.stop>
                       <button type="button" @click="openEditProject(project)">重命名</button>
-                      <button type="button" @click="confirmDeleteProject(project)">删除</button>
                       <button type="button" @click="openRemarkProject(project)">备注</button>
+                      <button type="button" @click="confirmDeleteProject(project)">删除</button>
                     </div>
                   </div>
                 </div>
@@ -102,12 +126,17 @@ export default {
         { key: 'sourceLanguage', label: '源语言' },
         { key: 'targetLanguage', label: '目标语言' },
         { key: 'materialCount', label: '素材数量' },
-        { key: 'translation', label: '字幕来源' },
+        { key: 'translation', label: '翻译方式' },
+        { key: 'voiceover', label: '配音' },
+        { key: 'backgroundRemoval', label: '去除背景音' },
+        { key: 'burnSubtitle', label: '字幕压制' },
         { key: 'subtitleErasure', label: '字幕擦除' },
         { key: 'remaining', label: '有效期剩余' },
+        { key: 'createTime', label: '创建时间' },
         { key: 'remark', label: '备注' },
         { key: 'actions', label: '操作' }
-      ]
+      ],
+      expireTip: '每个项目创建后7天内有效，过期会自动删除项目的所有内容，请在过期前及时导出译制视频'
     }
   },
   computed: {
@@ -115,6 +144,7 @@ export default {
       return this.projects.map(project => ({
         id: project.id,
         name: project.name,
+        projectInfo: project,
         remark: project.remark || '',
         sourceLanguage: project.fromLangName || project.fromLangCode || '-',
         targetLanguage: project.destLangName || project.destLangCode || '-',
@@ -124,9 +154,12 @@ export default {
         voiceover: this.formatDubType(project.dubType),
         voiceoverDetail: this.formatDubDetail(project),
         backgroundRemoval: this.formatRemoveBgAudio(project.removeBgAudio),
+        backgroundRemovalDetail: this.formatRemoveBgAudioDetail(project.removeBgAudio),
+        burnSubtitle: this.formatBurnSubtitle(project.burnSubtitleType),
         subtitleErasure: project.eraseType === 1 ? '开启' : '关闭',
         remaining: this.formatRemaining(project.expireTime),
-        expireTime: this.formatDateTime(project.expireTime)
+        expireTime: this.formatDateTime(project.expireTime),
+        createTime: this.formatDateTime(project.createTime)
       }))
     }
   },
@@ -153,14 +186,12 @@ export default {
       }
     },
     formatTranslation(project) {
-      if (project.transType === 2) return '上传字幕'
-      const subtitleLabels = { 1: '语音识别', 2: '画面识别' }
-      return subtitleLabels[project.subtitleType] || '语音识别'
+      const labels = { 1: '智能翻译', 2: '上传字幕' }
+      return labels[project.transType] || '-'
     },
     formatTranslationDetail(project) {
-      if (project.transType === 2) return '上传字幕'
-      const subtitleLabels = { 1: '语音识别', 2: '画面识别' }
-      return subtitleLabels[project.subtitleType] || '语音识别'
+      const labels = { 1: '智能翻译', 2: '上传字幕' }
+      return labels[project.transType] || '-'
     },
     formatDubType(dubType) {
       const labels = { 0: '关闭', 1: '原声克隆', 2: '智能配音', 3: '手动选择' }
@@ -176,6 +207,14 @@ export default {
     formatRemoveBgAudio(removeBgAudio) {
       const labels = { 0: '不去除', 1: '去除背景音', 2: '去除背景音及音效' }
       return labels[removeBgAudio] || '-'
+    },
+    formatRemoveBgAudioDetail(removeBgAudio) {
+      const labels = { 0: '不去除背景音', 1: '去除背景音', 2: '去除背景音及音效' }
+      return labels[removeBgAudio] || '-'
+    },
+    formatBurnSubtitle(burnSubtitleType) {
+      const labels = { 0: '关闭', 1: '开启' }
+      return labels[burnSubtitleType] || '-'
     },
     normalizeTime(value) {
       if (!value) return 0
@@ -265,14 +304,18 @@ export default {
       }
     },
     enterProject(project) {
+      const info = project.projectInfo || project
       this.$router.push({
         name: 'quick-video-translate-tasks',
-        params: { id: project.id },
+        params: {id: project.id},
         query: {
-          name: project.name,
-          fromLangName: project.sourceLanguage,
-          destLangName: project.targetLanguage,
-          expireTime: project.expireTime
+          projectInfo: JSON.stringify({
+            ...info,
+            name: info.name || project.name,
+            fromLangName: info.fromLangName || project.sourceLanguage,
+            destLangName: info.destLangName || project.targetLanguage,
+            expireTime: info.expireTime || info.expire_time || project.expireTime
+          })
         }
       })
     }
@@ -359,6 +402,61 @@ $border: #eee;
     background: #f5f5f7;
     color: #555;
     font-weight: 500;
+  }
+
+  .th-tip-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    vertical-align: middle;
+  }
+
+  .tip-icon {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #e2e2e2;
+    color: #666;
+    font-size: 12px;
+    font-weight: 600;
+    font-style: normal;
+    line-height: 1;
+    cursor: pointer;
+    flex-shrink: 0;
+
+    &:focus-visible {
+      outline: 2px solid $primary;
+      outline-offset: 2px;
+    }
+
+    .tip-bubble {
+      position: absolute;
+      top: calc(100% + 8px);
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+      display: none;
+      width: max-content;
+      max-width: 280px;
+      padding: 8px 10px;
+      border-radius: 4px;
+      background: rgba(0, 0, 0, .85);
+      color: #fff;
+      font-size: 12px;
+      font-weight: 400;
+      line-height: 1.5;
+      white-space: normal;
+      text-align: left;
+    }
+
+    &:hover .tip-bubble,
+    &:focus-within .tip-bubble {
+      display: block;
+    }
   }
 
   td { color: #333; }

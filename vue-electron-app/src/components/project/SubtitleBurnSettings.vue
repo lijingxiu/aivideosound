@@ -28,7 +28,7 @@
       </label>
     </div>
     <div class="controls position-control">
-      <label>垂直位置<input v-model.number="settings.position" type="range" min="0" max="100"></label>
+      <label>垂直位置<input v-model.number="settings.position" type="range" min="0" max="100" :style="'--progress:' + settings.position + '%'"></label>
       <span>{{ settings.position }}</span>
     </div>
   </div>
@@ -73,13 +73,39 @@ export default {
         if (!fontList.length) return
         this.settings.font = fontList[0].key
         this.settings.size = fontList[0].size
+        this.registerFonts()
       }
     }
+  },
+  mounted() {
+    this.registerFonts()
+    // 组件挂载后立即同步一次当前设置，保证预览在开启「新字幕压制」时马上生效
+    this.$emit('input', { ...this.settings })
   },
   methods: {
     resetFontSize(fontKey) {
       const font = this.fontList.find(item => item.key === fontKey)
       if (font) this.settings.size = font.size
+    },
+    registerFonts() {
+      const head = document.head || document.getElementsByTagName('head')[0]
+      this.fontList.forEach(font => {
+        if (!font.key) return
+        const id = `font-face-${font.key}`
+        if (document.getElementById(id)) return
+        const hasExt = /\.(ttf|otf|woff2?|eot|ttc)$/i.test(font.key)
+        const src = hasExt
+          ? `url('./fonts/${font.key}')`
+          : `url('./fonts/${font.key}.ttf') format('truetype'), url('./fonts/${font.key}.otf') format('opentype')`
+        const style = document.createElement('style')
+        style.id = id
+        style.textContent = `@font-face { font-family: '${font.key}'; src: ${src}; }`
+        head.appendChild(style)
+        // 触发本地字体预加载，切换字体时预览即可立即使用
+        if (document.fonts && document.fonts.load) {
+          document.fonts.load(`16px '${font.key}'`).catch(() => {})
+        }
+      })
     }
   }
 }
@@ -146,6 +172,27 @@ export default {
 .position-control input[type=range] {
   flex: 1;
   width: auto;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(to right, #ed6200 var(--progress, 0%), #e0e0e0 0);
+  outline: none;
+  cursor: pointer;
+}
+.position-control input[type=range]::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 3px;
+  background: transparent;
+}
+.position-control input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-top: -5px;
+  border-radius: 50%;
+  background: #ed6200;
+  border: 0;
 }
 
 .position-control > span {
@@ -245,6 +292,7 @@ export default {
   width: 100px;
   accent-color: #ed6200;
   background-color: #ccc;
+  color-scheme: light gray;
 }
 
 .controls ::v-deep .el-radio {

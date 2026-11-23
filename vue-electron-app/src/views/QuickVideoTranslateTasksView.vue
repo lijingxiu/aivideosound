@@ -4,17 +4,18 @@
       <header class="task-head">
         <button class="back-button" aria-label="返回" @click="$router.back()">‹</button>
         <div class="project-heading">
-          <span class="eyebrow">项目名称：</span>
+          <span class="eyebrow">当前项目名称</span>
           <h2>{{ projectName }}</h2>
-          <span class="divider">/</span>
-          <span class="eyebrow">译制任务名称</span>
         </div>
-        <div class="project-tags">
-          <span>智能翻译</span>
-          <span>原声克隆</span>
-          <span>去除背景音</span>
-          <span>压制字幕</span>
+        <div class="language-pair">
+          <strong>{{ sourceLanguageName || '—' }}</strong>
+          <span class="language-arrow">→</span>
+          <strong>{{ targetLanguageName || '—' }}</strong>
         </div>
+        <div class="project-statuses">
+          <span v-for="status in enabledStatuses" :key="status" class="project-status">{{ status }}</span>
+        </div>
+        <div class="validity"><span>有效期剩余</span><strong>{{ remainingDays() }}</strong></div>
       </header>
 
       <section class="content-card">
@@ -51,11 +52,12 @@
                 <input v-model="allSelected" type="checkbox" aria-label="全选">
               </th>
               <th class="name-cell">名称</th>
-              <th>翻译</th>
-              <th>导出状态</th>
               <th>字幕擦除</th>
+              <th>翻译</th>
+              <th>配音/压制</th>
               <th>状态</th>
-              <th>创建时间</th>
+              <th>是否导出</th>
+              <th>更新时间</th>
               <th class="action-cell">操作</th>
             </tr>
             </thead>
@@ -75,8 +77,32 @@
                 </div>
               </td>
               <td>
+                <span class="status-pill" :class="stateOf(eraseStates, task.eraseState).type">
+                  <i v-if="String(task.eraseState) !== '-2'"></i>{{ stateOf(eraseStates, task.eraseState).label }}
+                </span>
+              </td>
+              <td>
                 <span class="status-pill" :class="stateOf(transStates, task.transState).type">
                   <i></i>{{ stateOf(transStates, task.transState).label }}
+                </span>
+              </td>
+              <td>
+                <span class="status-pill" :class="stateOf(burnStates, task.burnState).type">
+                  <i></i>{{ stateOf(burnStates, task.burnState).label }}
+                </span>
+              </td>
+              <td>
+                <span class="overall-status">
+                  <el-tooltip v-if="isTaskFailed(task) && taskError(task)" :content="taskError(task)" placement="top">
+                    <span class="status-pill" :class="stateOf(overallStates, task.state).type">
+                      <i></i>{{ stateOf(overallStates, task.state).label }}
+                    </span>
+                  </el-tooltip>
+                  <span v-else class="status-pill" :class="stateOf(overallStates, task.state).type">
+                    <i></i>{{ stateOf(overallStates, task.state).label }}
+                  </span>
+                  <button v-if="isTaskFailed(task)" class="retry-button task-retry-button"
+                          :disabled="isRetrying(task.id)" @click="retryTask(task)">{{ isRetrying(task.id) ? '提交中' : '重试' }}</button>
                 </span>
               </td>
               <td>
@@ -87,17 +113,7 @@
                 </span>
                 <small v-if="exportStates[task.id]?.reason" class="export-reason">{{ exportStates[task.id].reason }}</small>
               </td>
-              <td>
-                <span class="status-pill" :class="stateOf(eraseStates, task.eraseState).type">
-                  <i></i>{{ stateOf(eraseStates, task.eraseState).label }}
-                </span>
-              </td>
-              <td>
-                <span class="status-pill" :class="stateOf(overallStates, task.state).type">
-                  <i></i>{{ stateOf(overallStates, task.state).label }}
-                </span>
-              </td>
-              <td>{{ formatCreateTime(task.createTime) }}</td>
+              <td>{{ formatCreateTime(task.updateTime || task.update_time || task.modifyTime || task.modifiedTime || task.createTime) }}</td>
               <td class="actions">
                 <button :disabled="exporting" @click="exportTask(task)">导出</button>
                 <button @click="deleteTask(task)">删除</button>
@@ -106,12 +122,12 @@
             </tbody>
             <tbody v-else-if="loading">
             <tr>
-              <td colspan="8" class="empty-state"><span class="loader"></span>正在加载任务...</td>
+              <td colspan="9" class="empty-state"><span class="loader"></span>正在加载任务...</td>
             </tr>
             </tbody>
             <tbody v-else>
             <tr>
-              <td colspan="7" class="empty-state">
+              <td colspan="9" class="empty-state">
                 <span class="empty-icon">□</span>
                 <strong>{{ errorMessage ? '任务加载失败' : '暂无译制任务' }}</strong>
                 <small>{{ errorMessage ? '请稍后重试' : '创建译制任务后，相关内容会显示在这里' }}</small>
@@ -122,8 +138,16 @@
         </div>
       </section>
 
+      <button v-if="exportFloating" type="button" class="export-floating-ball" aria-label="查看导出进度" @click="showExportDialog">
+        <i v-if="exportRunning" class="export-spinner"></i>
+        <span v-else>导出</span>
+      </button>
       <div v-if="exportVisible" class="export-mask" @click.self="closeExportDialog">
         <div class="export-dialog">
+          <div class="export-dialog-head">
+            <strong>导出进度</strong>
+            <button type="button" class="float-button" @click="floatExportDialog">悬浮</button>
+          </div>
           <div class="export-table">
             <div class="export-thead">
               <span>名称</span>
@@ -138,7 +162,7 @@
               </span>
             </div>
           </div>
-          <p class="export-note">注：处理失败的视频将自动跳过导出</p>
+          <p class="export-note">注：状态未成功的任务将自动跳过导出；仅成功的任务在导出失败时可点击重试</p>
           <div class="export-actions">
             <button class="stop-button" @click="onStopExport">
               {{ exportRunning ? '停止导出' : '关闭' }}
@@ -153,13 +177,14 @@
 
 <script>
 import AppLayout from '@/components/layout/AppLayout.vue'
-import {fetchDubFastList, fetchProjectList, deleteDubFast} from '@/api/project'
+import {fetchDubFastList, deleteDubFast, retryDubFast} from '@/api/project'
 
 export default {
   name: 'QuickVideoTranslateTasksView',
   components: {AppLayout},
   data() {
     return {
+      projectInfo: null,
       projectName: '',
       sourceLanguageName: '',
       targetLanguageName: '',
@@ -170,8 +195,10 @@ export default {
       selectedIds: [],
       loading: false,
       errorMessage: '',
+      retryingIds: {},
       exportStates: {},
       exportVisible: false,
+      exportFloating: false,
       exportQueue: [],
       exportRunning: false,
       stopExportRequested: false,
@@ -183,8 +210,14 @@ export default {
         1: {label: '成功', type: 'success'},
         2: {label: '失败', type: 'fail'}
       },
+      burnStates: {
+        '-1': {label: '未开始', type: 'pending'},
+        0: {label: '进行中', type: 'running'},
+        1: {label: '成功', type: 'success'},
+        2: {label: '失败', type: 'fail'}
+      },
       eraseStates: {
-        '-2': {label: '不擦除', type: 'disabled'},
+        '-2': {label: '——', type: 'disabled'},
         '-1': {label: '未开始', type: 'pending'},
         0: {label: '进行中', type: 'running'},
         1: {label: '成功', type: 'success'},
@@ -205,6 +238,16 @@ export default {
     hasFailedExport() {
       return this.exportQueue.some(item => item.type === 'fail')
     },
+    enabledStatuses() {
+      const info = this.projectInfo || {}
+      const enabled = value => value === true || Number(value) > 0 || value === 'true'
+      const statuses = ['翻译']
+      if (enabled(info.dubType)) statuses.push('配音')
+      if (enabled(info.removeBgAudio)) statuses.push('去除背景音')
+      if (enabled(info.eraseType)) statuses.push('字幕擦除')
+      if (enabled(info.burnSubtitleType)) statuses.push('字幕压制')
+      return statuses
+    },
     allSelected: {
       get() {
         return this.tasks.length > 0 && this.tasks.every(task => this.selectedIds.includes(task.id))
@@ -223,12 +266,12 @@ export default {
       this.loadTasks()
     },
     projectId() {
-      this.loadProject()
+      this.setProjectInfo()
       this.loadTasks()
     }
   },
   created() {
-    this.loadProject()
+    this.setProjectInfo()
     this.loadTasks()
   },
   beforeDestroy() {
@@ -246,41 +289,53 @@ export default {
     stateOf(map, value) {
       return map[value] || {label: '未开始', type: 'pending'}
     },
-    async loadProject() {
-      const id = String(this.projectId || '')
-      let cached = {}
+    isTaskSucceeded(task) {
+      return String(task?.state) === '1'
+    },
+    isTaskFailed(task) {
+      return String(task?.state) === '2'
+    },
+    taskError(task) {
+      const value = task?.error
+      if (!value) return ''
+      if (typeof value === 'string') return value
+      if (typeof value === 'object') return value.message || value.error || JSON.stringify(value)
+      return String(value)
+    },
+    isRetrying(taskId) {
+      return Boolean(this.retryingIds[taskId])
+    },
+    async retryTask(task) {
+      if (!this.isTaskFailed(task) || this.isRetrying(task.id)) return
       try {
-        cached = JSON.parse(sessionStorage.getItem(`project-${id}`) || '{}')
-      } catch (e) {
-        cached = {}
+        await this.$confirm('确定要重试当前任务吗？', '提示', {type: 'warning'})
+      } catch (error) {
+        if (error !== 'cancel' && error !== 'close') this.notify(error.message || '操作失败')
+        return
       }
-      const query = this.$route.query
-      this.projectName = query.name || cached.name || ''
-      this.sourceLanguageName = query.fromLangName || cached.sourceLanguageName || ''
-      this.targetLanguageName = query.destLangName || cached.targetLanguageName || ''
-      this.projectExpireTime = query.expireTime || cached.expireTime || ''
-
+      this.$set(this.retryingIds, task.id, true)
       try {
-        const response = await fetchProjectList({pageOffset: 0, pageLimit: 50, name: ''})
-        const list = response?.data?.data?.list || response?.data?.list || response?.list || []
-        const project = list.find(item => String(item.id) === id)
-        if (project) {
-          const cache = {
-            name: project.name || this.projectName,
-            sourceLanguageName: project.fromLangName || project.langName || this.sourceLanguageName,
-            targetLanguageName: project.destLangName || this.targetLanguageName,
-            expireTime: project.expireTime || this.projectExpireTime
-          }
-          this.projectName = cache.name
-          this.sourceLanguageName = cache.sourceLanguageName
-          this.targetLanguageName = cache.targetLanguageName
-          this.projectExpireTime = cache.expireTime
-          sessionStorage.setItem(`project-${id}`, JSON.stringify(cache))
-        }
-      } catch (e) {
-        // 列表接口失败时保留路由参数或缓存中的项目信息。
+        await retryDubFast(task.id)
+        await this.loadTasks()
+      } catch (error) {
+        const message = error?.error || error?.message || '重试提交失败，请稍后重试'
+        this.$alert(message, '重试失败', {type: 'error'})
+      } finally {
+        this.$delete(this.retryingIds, task.id)
       }
-      if (!this.projectName) this.projectName = id
+    },
+    setProjectInfo() {
+      const queryProjectInfo = this.$route.query.projectInfo
+      try {
+        this.projectInfo = JSON.parse(queryProjectInfo || '{}')
+      } catch (e) {
+        this.projectInfo = {}
+      }
+      const info = this.projectInfo || {}
+      this.projectName = info.name || this.projectId || ''
+      this.sourceLanguageName = info.fromLangName || info.sourceLanguage || info.sourceLangName || info.fromLangCode || ''
+      this.targetLanguageName = info.destLangName || info.targetLanguage || info.targetLangName || info.destLangCode || ''
+      this.projectExpireTime = info.expireTime || info.expire_time || ''
     },
     async loadTasks() {
       if (!this.projectId) return
@@ -335,6 +390,7 @@ export default {
       this.exporting = true
       this.exportRunning = true
       this.exportVisible = true
+      this.exportFloating = false
       this.stopExportRequested = false
       this.exportQueue = [{id: task.id, name: task.name || '未命名任务', label: '等待中', type: ''}]
       try {
@@ -342,16 +398,28 @@ export default {
       } finally {
         this.exporting = false
         this.exportRunning = false
-        this.exportQueue = this.exportQueue.map(item => item.label === '等待中' ? {...item, label: '失败', type: 'fail', reason: '已停止导出'} : item)
+        this.exportQueue = this.exportQueue.map(item => {
+          if (item.label !== '等待中') return item
+          const t = this.tasks.find(x => String(x.id) === String(item.id))
+          return String(t?.state) === '1'
+            ? {...item, label: '失败', type: 'fail', reason: '已停止导出'}
+            : {...item, label: '跳过', type: 'skip', reason: '任务未成功，已跳过导出'}
+        })
       }
     },
     async batchExport() {
       if (this.exporting || !this.selectedIds.length) return
+      const selectedTasks = this.selectedIds.map(id => this.tasks.find(item => item.id === id)).filter(Boolean)
+      try {
+        await this.$confirm(`确定要批量导出选中的 ${selectedTasks.length} 个视频吗`, '提示', {type: 'warning'})
+      } catch (error) {
+        if (error !== 'cancel' && error !== 'close') this.notify(error.message || '导出失败')
+        return
+      }
       this.exporting = true
       this.exportRunning = true
       this.exportVisible = true
       this.stopExportRequested = false
-      const selectedTasks = this.selectedIds.map(id => this.tasks.find(item => item.id === id)).filter(Boolean)
       this.exportQueue = selectedTasks.map(task => ({id: task.id, name: task.name || '未命名任务', label: '等待中', type: ''}))
       try {
         for (const task of selectedTasks) {
@@ -361,7 +429,13 @@ export default {
       } finally {
         this.exporting = false
         this.exportRunning = false
-        this.exportQueue = this.exportQueue.map(item => item.label === '等待中' ? {...item, label: '失败', type: 'fail', reason: '已停止导出'} : item)
+        this.exportQueue = this.exportQueue.map(item => {
+          if (item.label !== '等待中') return item
+          const t = this.tasks.find(x => String(x.id) === String(item.id))
+          return String(t?.state) === '1'
+            ? {...item, label: '失败', type: 'fail', reason: '已停止导出'}
+            : {...item, label: '跳过', type: 'skip', reason: '任务未成功，已跳过导出'}
+        })
       }
     },
     updateExportQueue(task, label, type, reason = '') {
@@ -384,6 +458,14 @@ export default {
         this.exportRunning = false
       }
     },
+    floatExportDialog() {
+      this.exportVisible = false
+      this.exportFloating = true
+    },
+    showExportDialog() {
+      this.exportFloating = false
+      this.exportVisible = true
+    },
     onStopExport() {
       if (this.exportRunning) {
         this.stopExportRequested = true
@@ -393,7 +475,10 @@ export default {
       }
     },
     closeExportDialog() {
-      if (!this.exportRunning) this.exportVisible = false
+      if (!this.exportRunning) {
+        this.exportVisible = false
+        this.exportFloating = false
+      }
     },
     async openExportFolder() {
       const api = window.electronAPI
@@ -416,6 +501,11 @@ export default {
       const setState = (label, type, reason = '') => {
         this.$set(this.exportStates, task.id, {label, type, reason})
         this.updateExportQueue(task, label, type, reason)
+      }
+      // 状态不是“成功”的任务无法导出，直接跳过（不视为失败，也不提供重试）
+      if (!this.isTaskSucceeded(task)) {
+        setState('跳过', 'skip', '任务未成功，已跳过导出')
+        return
       }
       const subtitleUrl = task.burnAssUrl
       const audioUrl = task.burnAudioUrl
@@ -499,7 +589,8 @@ $muted: #8993a1;
 .task-head {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+  flex-wrap: wrap;
   padding: 8px 0;
   border-bottom: 1px solid $border;
 }
@@ -550,17 +641,55 @@ $muted: #8993a1;
   }
 }
 
-.project-tags {
-  display: flex;
-  gap: 8px;
-  margin-left: 12px;
+.language-pair {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  font-size: 13px;
 
-  span {
-    padding: 5px 10px;
+  strong {
+    color: #667085;
+    font-weight: 500;
+  }
+
+  .language-arrow {
+    color: #98a2b3;
+  }
+}
+
+.project-statuses {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+
+  .project-status {
+    padding: 4px 8px;
     color: #667085;
     background: #f5f7fa;
     border-radius: 4px;
     font-size: 12px;
+    white-space: nowrap;
+  }
+}
+
+.validity {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: auto;
+  padding: 7px 14px;
+  color: $orange;
+  background: #fff8f0;
+  white-space: nowrap;
+
+  span {
+    font-size: 12px;
+  }
+
+  strong {
+    font-size: 13px;
   }
 }
 
@@ -780,6 +909,10 @@ input[type='checkbox'] {
   color: #e5484d;
 }
 
+.export-status.skip {
+  color: #98a2b3;
+}
+
 .export-reason {
   display: block;
   margin-top: 3px;
@@ -798,6 +931,16 @@ input[type='checkbox'] {
     cursor: not-allowed;
     opacity: .45;
   }
+}
+
+.overall-status {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.task-retry-button {
+  padding: 0;
 }
 
 .status-pill {
@@ -926,6 +1069,36 @@ input[type='checkbox'] {
   }
 }
 
+.export-floating-ball {
+  position: fixed;
+  right: 28px;
+  bottom: 28px;
+  z-index: 2001;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 58px;
+  height: 58px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  color: #fff;
+  background: $orange;
+  box-shadow: 0 8px 24px rgba(255, 122, 0, .35);
+  font-size: 12px;
+  cursor: pointer;
+
+  .export-spinner {
+    width: 20px;
+    height: 20px;
+    margin: 0;
+  }
+
+  &:hover {
+    background: #e96d00;
+  }
+}
+
 .export-mask {
   position: fixed;
   inset: 0;
@@ -945,6 +1118,30 @@ input[type='checkbox'] {
   border-radius: 8px;
   background: #fff;
   box-shadow: 0 20px 45px rgba(16, 24, 40, .18);
+}
+
+.export-dialog-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  color: #344054;
+  font-size: 15px;
+}
+
+.float-button {
+  padding: 5px 12px;
+  border: 1px solid #d0d5dd;
+  border-radius: 4px;
+  color: #667085;
+  background: #fff;
+  font-size: 12px;
+  cursor: pointer;
+
+  &:hover {
+    border-color: $orange;
+    color: $orange;
+  }
 }
 
 .export-table {
@@ -1002,6 +1199,10 @@ input[type='checkbox'] {
   &.fail {
     color: #e5484d;
   }
+
+  &.skip {
+    color: #98a2b3;
+  }
 }
 
 .export-note {
@@ -1043,10 +1244,6 @@ input[type='checkbox'] {
 }
 
 @media (max-width: 1100px) {
-  .project-tags {
-    display: none;
-  }
-
   .content-card {
     padding: 18px 14px;
   }

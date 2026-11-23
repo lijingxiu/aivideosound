@@ -19,14 +19,14 @@ export function calcVideoPointDetails(video, settings) {
   else add('智能翻译', config.transAI)
   if (settings.subtitleSource === 'asr') add('语音识别', config.subtitleAsr)
   if (settings.subtitleSource === 'ocr') add('画面识别', config.subtitleOcr)
-  add('视频压制（基础项）', config.videoBurn)
   if (settings.dubbingEnabled) {
-    add(settings.dubbingTab === 'clone' ? '原声克隆配音' : 'AI音色库配音',
-      settings.dubbingTab === 'clone' ? config.dubClone : config.dubSelect)
+    if (settings.dubbingTab === 'clone') add('原声克隆配音', config.dubClone)
+    else if (settings.dubbingTab === 'match') add('智能配音', config.dubMatch)
+    else add('手动选择配音', config.dubSelect)
   }
   if (settings.subtitleErase) add('字幕擦除', config.videoErasePro)
   if (settings.backgroundAudio !== 'keep') add('去除背景音', config.removeBgAudio)
-
+  add('视频压制（基础必须项）', config.videoBurn)
   return details
 }
 

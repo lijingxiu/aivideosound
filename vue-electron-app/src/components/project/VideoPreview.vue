@@ -55,7 +55,7 @@ export default {
     },
     subtitlePreview: { type: Object, default: null }
   },
-  emits: ['update:region'],
+  emits: ['update:region', 'video-rect'],
   data() {
     return {
       playing: false,
@@ -94,10 +94,10 @@ export default {
     },
     subtitleTextStyle() {
       const settings = this.subtitlePreview || {}
-      const scale = this.videoRect?.width ? this.videoRect.width / 1080 : 1
+      const scale = this.videoRect?.height ? this.videoRect.height / 1080 : 1
       const fontSize = (Number(settings.size) || 32) * scale
       const style = {
-        fontFamily: settings.font || 'sans-serif',
+        fontFamily: settings.font ? `'${settings.font}'` : 'sans-serif',
         fontSize: `${fontSize}px`,
         color: settings.color || '#fff',
         fontWeight: settings.bold ? 'bold' : 'normal'
@@ -157,6 +157,7 @@ export default {
         width: videoRect.width,
         height: videoRect.height
       }
+      this.$emit('video-rect', this.videoRect)
     },
     onTimeUpdate() {
       this.currentTime = this.$refs.videoRef?.currentTime || 0

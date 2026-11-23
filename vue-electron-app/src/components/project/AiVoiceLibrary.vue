@@ -19,7 +19,7 @@
               <button class="avatar" type="button" :aria-label="`试听${speaker.name}`" @click="toggleAudio(speaker)"><img v-if="speaker.headUrl" :src="speaker.headUrl" :alt="speaker.name"><span v-else>♫</span><i>{{ playingId === speaker.id ? 'Ⅱ' : '▶' }}</i></button>
               <div class="speaker-info"><div class="speaker-title">{{ speaker.name }} <span v-if="speaker.language" class="tag language">{{ speaker.language }}</span><span v-if="speaker.isMulti" class="tag multi">多语种</span></div><p>{{ speaker.descr || '暂无描述' }}</p></div>
               <span class="tag demographic">{{ speaker.gender === 1 ? '男' : speaker.gender === 2 ? '女' : '—' }}</span><span class="tag demographic">{{ ageLabel(speaker.age) }}</span>
-              <button class="favorite" :class="{favorited: speaker.isFavorite}" :aria-label="speaker.isFavorite ? '取消收藏' : '收藏'" @click="toggleFavorite(speaker)">{{ speaker.isFavorite ? '★' : '☆' }}</button>
+              <button class="favorite" :class="{favorited: speaker.favId > 0}" :aria-label="speaker.favId > 0 ? '取消收藏' : '收藏'" @click="toggleFavorite(speaker)">{{ speaker.favId > 0 ? '★' : '☆' }}</button>
               <button class="use-button" :class="{'is-selected': selectedSpeaker && selectedSpeaker.id === speaker.id}" @click="selectSpeaker(speaker)">{{ selectedSpeaker && selectedSpeaker.id === speaker.id ? '使用中' : '使用' }}</button>
             </article>
             <div v-if="loading" class="list-state">加载中…</div><div v-else-if="!speakers.length" class="list-state">暂无符合条件的音色</div>
@@ -64,17 +64,23 @@ export default {
       try {
         const response = await request(`/Speaker${this.tab === 'fav' ? 'Fav' : ''}/GetList?${params.toString()}`)
         if (requestId !== this.requestId) return
-        this.speakers = (response?.data?.list || response?.list || []).map(item => ({ ...item, isFavorite: this.tab === 'fav' || !!item.isFavorite }))
+        this.speakers = (response?.data?.list || response?.list || []).map(item => ({ ...item, favId: Number(item.favId) || (this.tab === 'fav' ? Number(item.id) : 0) }))
       } catch (error) { if (requestId === this.requestId) { this.speakers = []; this.$message?.error(error.message || '获取音色列表失败') } }
       finally { if (requestId === this.requestId) this.loading = false }
     },
     async toggleFavorite(speaker) {
       try {
         const params = `?token=${encodeURIComponent(getProjectToken())}`
-        if (speaker.isFavorite) await request(`/SpeakerFav/Delete${params}`, { method: 'POST', body: JSON.stringify({ id: speaker.favId || speaker.favoriteId || speaker.id }) })
-        else await request(`/SpeakerFav/Add${params}`, { method: 'POST', body: JSON.stringify({ speakerId: speaker.id }) })
-        if (this.tab === 'fav' && speaker.isFavorite) this.speakers = this.speakers.filter(item => item.id !== speaker.id)
-        else this.$set(speaker, 'isFavorite', !speaker.isFavorite)
+        if (speaker.favId > 0) {
+          await request(`/SpeakerFav/Delete${params}`, { method: 'POST', body: JSON.stringify({ id: speaker.favId }) })
+          if (this.tab === 'fav') this.speakers = this.speakers.filter(item => item.id !== speaker.id)
+          else this.$set(speaker, 'favId', 0)
+        } else {
+          const response = await request(`/SpeakerFav/Add${params}`, { method: 'POST', body: JSON.stringify({ speakerId: speaker.id }) })
+          const favId = Number(response?.data?.favId || response?.data?.id || response?.favId || response?.id || 0)
+          if (favId > 0) this.$set(speaker, 'favId', favId)
+          else this.loadList()
+        }
       } catch (error) { this.$message?.error(error.message || '收藏操作失败') }
     },
     toggleAudio(speaker) {
