@@ -278,7 +278,7 @@ async function exportBurnVideo(event, { taskId, projectId, materialName, videoUr
     const resolvedFontsDir = resolveFontsDir(fontsDir);
     const escapedFontsDir = resolvedFontsDir ? escapeFilterPath(resolvedFontsDir) : '';
     const filter = `[0:v]noise=alls=2:allf=t,eq=brightness=0.003:contrast=1.002,scale=iw+4:ih+4,crop=iw-4:ih-4:2:2,subtitles=filename=${escapedSubtitle}${escapedFontsDir ? `:fontsdir=${escapedFontsDir}` : ''}[vout]`;
-    const args = ['-hide_banner', '-v', 'info', '-stats', '-y', '-allow_sw', '1', '-i', videoPath, '-i', audioPath, '-filter_complex', filter, '-map', '[vout]', '-c:v', 'libx264', '-crf', '22', '-preset', 'faster', '-map', '1:a', '-c:a', 'copy', '-map_metadata', '-1', outputPath];
+    const args = ['-hide_banner', '-v', 'info', '-stats', '-y', '-i', videoPath, '-i', audioPath, '-filter_complex', filter, '-map', '[vout]', '-c:v', 'libx264', '-crf', '22', '-preset', 'faster', '-map', '1:a', '-c:a', 'copy', '-map_metadata', '-1', outputPath];
     console.log('[导出] 开始压制:', { taskId, command: ffmpegPath, args, outputPath });
     await new Promise((resolve, reject) => {
         const child = spawn(ffmpegPath, args);
@@ -362,6 +362,20 @@ app.on('activate', () => {
 });
 
 ipcMain.handle('get-app-version', () => app.getVersion());
+ipcMain.handle('get-video-codec', async (_event, filePath) => {
+    if (!filePath || !existsSync(filePath)) throw new Error('找不到视频文件');
+    return new Promise((resolve, reject) => {
+        const process = spawn(ffmpegPath, ['-hide_banner', '-i', filePath, '-map', '0:v:0', '-c:v', 'copy', '-f', 'null', '-']);
+        let output = '';
+        process.stderr.on('data', chunk => { output += chunk.toString(); });
+        process.on('error', reject);
+        process.on('close', () => {
+            const match = output.match(/Video:\s*([^,\s]+)/i);
+            if (match) return resolve(match[1].toLowerCase());
+            reject(new Error(`无法识别视频编码: ${output.slice(-500)}`));
+        });
+    });
+});
 
 // 将上传的视频复制到应用专属目录，而不是只保存短暂的 blob URL。
 ipcMain.handle('cache-video', async (_event, { id, name, size, duration, sourcePath, bytes, thumbnail }) => {
@@ -393,15 +407,14 @@ ipcMain.handle('split-video-audio', async (_event, { sourcePath, id, extension }
     if (!sourcePath || !existsSync(sourcePath)) throw new Error('找不到待处理的视频文件');
     const dir = join(app.getPath('temp'), 'qianyin-media', String(id));
     mkdirSync(dir, { recursive: true });
-    const sourceExt = extension || extname(sourcePath) || '.mp4';
-    const mutePath = join(dir, `video-mute${sourceExt.startsWith('.') ? sourceExt : `.${sourceExt}`}`);
-    const audioPath = join(dir, 'audio.mp3');
+    const mutePath = join(dir, 'video-mute.mp4');
+    const audioPath = join(dir, 'audio.m4a');
 
     await new Promise((resolve, reject) => {
         const process = spawn(ffmpegPath, [
             '-y', '-i', sourcePath,
-            '-map', '0:v:0', '-c:v', 'copy', '-an', mutePath,
-            '-map', '0:a:0?', '-vn', '-acodec', 'libmp3lame', '-b:a', '192k', audioPath
+            '-map', '0:v:0', '-an', '-c:v', 'copy', mutePath,
+            '-map', '0:a:0?', '-vn', '-c:a', 'aac', '-b:a', '192k', '-ac', '1', audioPath
         ]);
         let error = '';
         process.stderr.on('data', chunk => { error += chunk.toString(); });

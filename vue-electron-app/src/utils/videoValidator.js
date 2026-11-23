@@ -7,13 +7,15 @@ import {
 } from '@/constants/project'
 
 export function getFileExt(name) {
-  const idx = name.lastIndexOf('.')
-  return idx >= 0 ? name.slice(idx + 1).toLowerCase() : ''
+  const fileName = typeof name === 'string' ? name : ''
+  const idx = fileName.lastIndexOf('.')
+  return idx >= 0 ? fileName.slice(idx + 1).toLowerCase() : ''
 }
 
 export function getBaseName(name) {
-  const idx = name.lastIndexOf('.')
-  return idx >= 0 ? name.slice(0, idx) : name
+  const fileName = typeof name === 'string' ? name : ''
+  const idx = fileName.lastIndexOf('.')
+  return idx >= 0 ? fileName.slice(0, idx) : fileName
 }
 
 export function validateVideoFile(video) {

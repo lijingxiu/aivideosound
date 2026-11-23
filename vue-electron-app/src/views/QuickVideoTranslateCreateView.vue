@@ -27,7 +27,7 @@
           </label>
           <label>目标语言
             <el-select v-model="targetLanguage" placeholder="请选择" class="language-select">
-              <el-option v-for="l in targetLanguages" :key="l.code" :label="l.name" :value="l.code" :disabled="l.code === sourceLanguage"/>
+              <el-option v-for="l in targetLanguages" :key="l.code" :label="targetLanguageLabel(l)" :value="l.code" :disabled="l.code === sourceLanguage"/>
             </el-select>
           </label>
         </div>
@@ -93,7 +93,7 @@
           </el-tabs>
         </div>
         <div class="setting-block dubbing-block">
-          <div class="dubbing-title">配音设置 <el-switch v-model="dubbingEnabled" active-color="#ed6200" inactive-color="#d9d9d9"/></div>
+          <div class="dubbing-title">配音设置 <el-switch v-model="dubbingEnabled" :disabled="!dubbingAvailable" active-color="#ed6200" inactive-color="#d9d9d9"/></div>
           <el-tabs v-if="dubbingEnabled" v-model="dubbingTab" type="border-card" class="subtitle-tabs">
             <el-tab-pane name="clone">
               <span slot="label">
@@ -219,7 +219,7 @@ import SubmitProgressModal from '@/components/project/SubmitProgressModal.vue';
 import TranslationDictionary from '@/components/project/TranslationDictionary.vue';
 import SubtitleBurnSettings from '@/components/project/SubtitleBurnSettings.vue';
 import AiVoiceLibrary from '@/components/project/AiVoiceLibrary.vue';
-import {SUBTITLE_SOURCES, MAX_VIDEO_COUNT} from '@/constants/project';
+import {SUBTITLE_SOURCES, MAX_VIDEO_COUNT, SUPPORTED_CODECS} from '@/constants/project';
 import {validateVideoFile, naturalSort, getFileExt, getBaseName} from '@/utils/videoValidator';
 import {calcTotalPoints, calcVideoPointDetails} from '@/utils/pointsCalculator';
 import {fetchProjectInfo, getOriginalUploadPolicy, submitProjectTask} from '@/api/project'
@@ -269,6 +269,7 @@ export default {
   watch: {
     targetLanguage(value, oldValue) {
       this.selectedVoice = null
+      if (!this.dubbingAvailable) this.dubbingEnabled = false
       if (!oldValue || value === oldValue) return
       this.subtitleFiles = []
       this.subtitleFolder = ''
@@ -345,6 +346,12 @@ export default {
     targetLanguageName() {
       return this.targetLanguages.find(item => item.code === this.targetLanguage)?.name || ''
     },
+    selectedTargetLanguage() {
+      return this.targetLanguages.find(item => item.code === this.targetLanguage) || null
+    },
+    dubbingAvailable() {
+      return String(this.selectedTargetLanguage?.dubState) !== '0'
+    },
     subtitlePreview() {
       const settings = this.subtitleBurnSettings
       if (!this.burnSubtitle || !settings?.font || !settings?.size) return null
@@ -363,6 +370,10 @@ export default {
     }
   },
   methods: {
+    targetLanguageLabel(language) {
+      if (!language) return ''
+      return String(language.dubState) === '0' ? `${language.name}（不支持配音）` : language.name
+    },
     onVideoRect(rect) {
       if (this.regionHeightInit || !rect || !rect.height) return
       // 选择框默认高度固定为 50px，换算成相对视频显示高度的比例
@@ -429,23 +440,6 @@ export default {
         video.onerror = () => resolve(0)
       })
     },
-    async readVideoCodec(file) {
-      const api = window.electronAPI
-      if (api?.getVideoMetadata) {
-        const metadata = await api.getVideoMetadata(api.getFilePath?.(file) || file.path)
-        return metadata?.codec || metadata?.videoCodec || metadata?.codecName || ''
-      }
-      return file.codec || file.videoCodec || file.codecName || ''
-    },
-    async validateVideo(file, objectUrl) {
-      const duration = await this.readVideoDuration(objectUrl)
-      const codec = await this.readVideoCodec(file)
-      return {
-        duration,
-        codec,
-        errors: validateVideoFile({...file, duration, codec})
-      }
-    },
     createThumbnail(file, objectUrl) {
       return new Promise(resolve => {
         const video = document.createElement('video')
@@ -485,32 +479,54 @@ export default {
         console.error('缓存视频失败', error)
       }
     },
+    async readVideoCodec(file) {
+      const api = window.electronAPI
+      let filePath = file.path || ''
+      try {
+        filePath = api?.getFilePath?.(file) || filePath
+      } catch (error) {
+        console.warn('获取视频路径失败', error)
+      }
+      if (!api?.getVideoCodec || !filePath) return ''
+      try {
+        const codec = await api.getVideoCodec(filePath)
+        return typeof codec === 'string' ? codec.trim().toLowerCase() : ''
+      } catch (error) {
+        console.warn('读取视频编码失败', error)
+        return ''
+      }
+    },
     async addVideos(files) {
       if (this.videos.length + files.length > MAX_VIDEO_COUNT) return alert('单次任务不能超过100个视频');
       const next = []
-      for (const [index, file] of files.entries()) {
-        const objectUrl = URL.createObjectURL(file)
-        try {
-          const validation = await this.validateVideo(file, objectUrl)
-          if (validation.errors.length) {
-            URL.revokeObjectURL(objectUrl)
-            alert(`${file.name}${validation.errors.join('，')}，请检查修改`)
-            continue
-          }
-          next.push({
-            id: `${Date.now()}-${index}-${Math.random().toString(36).slice(2, 8)}`,
-            name: file.name,
-            size: file.size,
-            duration: validation.duration,
-            codec: validation.codec,
-            objectUrl,
-            thumbnail: '',
-            file
-          })
-        } catch (error) {
-          URL.revokeObjectURL(objectUrl)
-          alert(`${file.name}视频信息读取失败，请检查修改`)
+      for (const [i, f] of files.entries()) {
+        const codec = await this.readVideoCodec(f)
+        if (!SUPPORTED_CODECS.includes(codec)) {
+          this.$message({message: `${f.name}编码格式不支持`, type: 'warning'})
+          continue
         }
+        const e = validateVideoFile({
+          ...f,
+          name: f.name || f.path || '',
+          size: Number(f.size) || 0,
+          duration: Number(f.duration) || 0,
+          codec
+        })
+        if (e.length) {
+          alert(`${f.name}${e.join('，')}，请检查修改`)
+          continue
+        }
+        const objectUrl = URL.createObjectURL(f)
+        next.push({
+          id: `${Date.now()}-${i}-${Math.random().toString(36).slice(2, 8)}`,
+          name: f.name,
+          size: f.size,
+          duration: f.duration || 0,
+          codec,
+          objectUrl,
+          thumbnail: '',
+          file: f
+        })
       }
       this.videos = [...this.videos, ...next].sort(naturalSort);
       if (!this.activeId) this.activeId = this.videos[0]?.id || ''
@@ -557,8 +573,8 @@ export default {
       })
       const muteBytes = await api.readTempFile(paths.mutePath)
       const audioBytes = await api.readTempFile(paths.audioPath)
-      const muteFile = new File([muteBytes], `video-mute.${getFileExt(video.name)}`, {type: video.file?.type || 'video/mp4'})
-      const audioFile = new File([audioBytes], `${getBaseName(video.name)}.mp3`, {type: 'audio/mpeg'})
+      const muteFile = new File([muteBytes], 'video-mute.mp4', {type: 'video/mp4'})
+      const audioFile = new File([audioBytes], `${getBaseName(video.name)}.m4a`, {type: 'audio/mp4'})
       return { paths, muteFile, audioFile }
     },
     async getUploadFile(video) {
@@ -701,9 +717,11 @@ export default {
       if (this.sourceLanguage === this.targetLanguage) return this.$alert('源语言和目标语言不能相同', '提示', {type: 'warning'});
       if (this.translationSource === 'upload' && !this.subtitleFiles.length) return this.$alert('请选择字幕文件所在位置', '提示', {type: 'warning'});
       if (this.translationSource === 'upload') {
-        const unmatchedVideo = this.subtitleMatchList.find(item => !item.subtitle)
-        if (unmatchedVideo) {
-          return this.$alert(`${unmatchedVideo.video.name}找不到目标语言为${this.targetLanguageName}的字幕文件`, '字幕未匹配', {type: 'warning'})
+        const unmatchedVideos = this.subtitleMatchList
+          .filter(item => !item.subtitle)
+          .map(item => item.video.name)
+        if (unmatchedVideos.length) {
+          return this.$alert(`以下视频没有匹配的字幕文件：\n${unmatchedVideos.join('\n')}`, '字幕未匹配', {type: 'warning'})
         }
       }
       if (this.dubbingEnabled && this.dubbingTab === 'library' && !this.selectedVoice) {

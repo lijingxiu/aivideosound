@@ -3,6 +3,7 @@ const { contextBridge, ipcRenderer, webUtils } = require('electron')
 
 contextBridge.exposeInMainWorld('electronAPI', {
     getVersion: () => ipcRenderer.invoke('get-app-version'),
+    getVideoCodec: (filePath) => ipcRenderer.invoke('get-video-codec', filePath),
     minimize: () => ipcRenderer.send('window-minimize'),
     maximize: () => ipcRenderer.send('window-maximize'),
     close: () => ipcRenderer.send('window-close'),

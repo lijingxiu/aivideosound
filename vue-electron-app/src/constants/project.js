@@ -1,5 +1,5 @@
 export const SUPPORTED_VIDEO_EXT = ['mp4', 'avi', 'mov', 'wmv', 'mkv', 'flv', 'ts']
-export const SUPPORTED_CODECS = ['h264', 'h265', 'hevc', 'avc']
+export const SUPPORTED_CODECS = ['h264', 'hevc', 'av1', 'vp9']
 export const MAX_VIDEO_COUNT = 100
 export const MAX_VIDEO_SIZE = 1 * 1024 * 1024 * 1024
 export const MIN_VIDEO_DURATION = 10

@@ -138,10 +138,6 @@
         </div>
       </section>
 
-      <button v-if="exportFloating" type="button" class="export-floating-ball" aria-label="查看导出进度" @click="showExportDialog">
-        <i v-if="exportRunning" class="export-spinner"></i>
-        <span v-else>导出</span>
-      </button>
       <div v-if="exportVisible" class="export-mask" @click.self="closeExportDialog">
         <div class="export-dialog">
           <div class="export-dialog-head">
@@ -273,9 +269,20 @@ export default {
   created() {
     this.setProjectInfo()
     this.loadTasks()
+    window.addEventListener('storage', this.onStorageExportEvent)
+    window.addEventListener('qvt-export-show', this.showExportDialog)
+    this.loadPersistedExportState()
+  },
+  activated() {
+    window.removeEventListener('qvt-export-show', this.showExportDialog)
+    window.addEventListener('qvt-export-show', this.showExportDialog)
+    this.setProjectInfo()
+    this.loadTasks()
   },
   beforeDestroy() {
     clearTimeout(this.searchTimer)
+    window.removeEventListener('storage', this.onStorageExportEvent)
+    window.removeEventListener('qvt-export-show', this.showExportDialog)
   },
   methods: {
     formatCreateTime(value) {
@@ -393,6 +400,7 @@ export default {
       this.exportFloating = false
       this.stopExportRequested = false
       this.exportQueue = [{id: task.id, name: task.name || '未命名任务', label: '等待中', type: ''}]
+      this.persistExportState()
       try {
         await this.runExport(task)
       } finally {
@@ -405,6 +413,7 @@ export default {
             ? {...item, label: '失败', type: 'fail', reason: '已停止导出'}
             : {...item, label: '跳过', type: 'skip', reason: '任务未成功，已跳过导出'}
         })
+        this.persistExportState()
       }
     },
     async batchExport() {
@@ -421,6 +430,7 @@ export default {
       this.exportVisible = true
       this.stopExportRequested = false
       this.exportQueue = selectedTasks.map(task => ({id: task.id, name: task.name || '未命名任务', label: '等待中', type: ''}))
+      this.persistExportState()
       try {
         for (const task of selectedTasks) {
           if (this.stopExportRequested) break
@@ -436,6 +446,7 @@ export default {
             ? {...item, label: '失败', type: 'fail', reason: '已停止导出'}
             : {...item, label: '跳过', type: 'skip', reason: '任务未成功，已跳过导出'}
         })
+        this.persistExportState()
       }
     },
     updateExportQueue(task, label, type, reason = '') {
@@ -452,24 +463,65 @@ export default {
       if (!task) return
       this.exportRunning = true
       this.stopExportRequested = false
+      this.exportVisible = true
+      this.persistExportState()
       try {
         await this.runExport(task)
       } finally {
         this.exportRunning = false
+        this.persistExportState()
       }
     },
     floatExportDialog() {
       this.exportVisible = false
       this.exportFloating = true
+      this.persistExportState()
     },
     showExportDialog() {
       this.exportFloating = false
       this.exportVisible = true
+      this.persistExportState()
+    },
+    loadPersistedExportState() {
+      try {
+        const raw = localStorage.getItem('qvt_export_floating_state')
+        if (raw) {
+          const state = JSON.parse(raw)
+          if (state && state.visible === true) {
+            this.exportVisible = true
+            this.exportQueue = Array.isArray(state.queue) ? state.queue : []
+            this.exportRunning = Boolean(state.running)
+            this.exporting = Boolean(state.running)
+          }
+        }
+      } catch (error) {
+        console.error('恢复导出悬浮状态失败', error)
+      }
+    },
+    persistExportState() {
+      try {
+        localStorage.setItem('qvt_export_floating_state', JSON.stringify({
+          visible: this.exportVisible,
+          floating: this.exportFloating,
+          running: this.exportRunning,
+          queue: this.exportQueue,
+          projectId: this.projectId
+        }))
+        window.dispatchEvent(new Event('qvt-export-state-change'))
+      } catch (error) {
+        console.error('持久化导出悬浮状态失败', error)
+      }
+    },
+    onStorageExportEvent(event) {
+      if (event.key === 'qvt_export_floating_state') {
+        this.loadPersistedExportState()
+      }
     },
     onStopExport() {
       if (this.exportRunning) {
         this.stopExportRequested = true
         this.notify('当前视频处理完成后将停止批量导出')
+        this.persistExportState()
       } else {
         this.closeExportDialog()
       }
@@ -477,7 +529,7 @@ export default {
     closeExportDialog() {
       if (!this.exportRunning) {
         this.exportVisible = false
-        this.exportFloating = false
+        this.persistExportState()
       }
     },
     async openExportFolder() {
@@ -534,11 +586,14 @@ export default {
         }, () => {
           downloading = false
           setState('压制中', 'running')
+          this.persistExportState()
         })
         setState('完成', 'success')
+        this.persistExportState()
       } catch (error) {
         setState('失败', 'fail', downloading ? '文件下载失败' : '视频压制失败')
         console.error('[导出] 导出失败:', error)
+        this.persistExportState()
       }
     },
     async deleteTask(task) {
@@ -1069,35 +1124,6 @@ input[type='checkbox'] {
   }
 }
 
-.export-floating-ball {
-  position: fixed;
-  right: 28px;
-  bottom: 28px;
-  z-index: 2001;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 58px;
-  height: 58px;
-  padding: 0;
-  border: 0;
-  border-radius: 50%;
-  color: #fff;
-  background: $orange;
-  box-shadow: 0 8px 24px rgba(255, 122, 0, .35);
-  font-size: 12px;
-  cursor: pointer;
-
-  .export-spinner {
-    width: 20px;
-    height: 20px;
-    margin: 0;
-  }
-
-  &:hover {
-    background: #e96d00;
-  }
-}
 
 .export-mask {
   position: fixed;
