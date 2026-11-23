@@ -1,0 +1,64 @@
+vue-electron-app/src/utils/videoValidator.js
+  51ba4f4be4c329b6 10-12,16-18
+vue-electron-app/src/views/QuickVideoTranslateTasksView.vue
+  51ba4f4be4c329b6 272-280,284-285,403,416,433,449,466-467,472,478,483-518,524,532,589,592,596
+vue-electron-app/out/preload/index.js
+  51ba4f4be4c329b6 6
+vue-electron-app/src/App.vue
+  51ba4f4be4c329b6 2-10,14-15,17-50,54-92
+vue-electron-app/src/constants/project.js
+  51ba4f4be4c329b6 2
+vue-electron-app/out/main/main.js
+  51ba4f4be4c329b6 281,365-378,410-411,416-417
+vue-electron-app/src/views/QuickVideoTranslateCreateView.vue
+  51ba4f4be4c329b6 30,96,222,272,349-354,373-376,482-498,502-504,506,508-520,525-529,576-577
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "bzl_git_version": "0.1.48",
+  "base_commit_sha": "69dbfadb42096bdc97df6a21a7f0408edad0d626",
+  "prompts": {
+    "3b289d9ca6937e2c": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "f9cdda27-d3f1-40af-ac3a-e7a648fb2596",
+        "model": "grok-4.7",
+        "ide": "cursor"
+      },
+      "human_author": "liqiang05",
+      "transcript_path": "/Users/administrator/.cursor/projects/Users-administrator-code-aivideosound-vue-electron-app/agent-transcripts/f9cdda27-d3f1-40af-ac3a-e7a648fb2596/f9cdda27-d3f1-40af-ac3a-e7a648fb2596.jsonl",
+      "total_additions": 299,
+      "total_deletions": 80,
+      "accepted_lines": 0,
+      "overriden_lines": 0
+    },
+    "51ba4f4be4c329b6": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "644a0c4c-a520-436f-a182-b97993549bd5",
+        "model": "grok-4.7",
+        "ide": "cursor"
+      },
+      "human_author": "liqiang05",
+      "transcript_path": "/Users/administrator/.cursor/projects/Users-administrator-code-aivideosound-vue-electron-app/agent-transcripts/644a0c4c-a520-436f-a182-b97993549bd5/644a0c4c-a520-436f-a182-b97993549bd5.jsonl",
+      "total_additions": 262,
+      "total_deletions": 97,
+      "accepted_lines": 226,
+      "overriden_lines": 1
+    },
+    "e5872b36ea5f63f9": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "fe917744-b814-4192-9e29-64f66e8ce3c1",
+        "model": "gpt-5.6-terra-medium",
+        "ide": "cursor"
+      },
+      "human_author": "liqiang05",
+      "transcript_path": "/Users/administrator/.cursor/projects/Users-administrator-code-aivideosound-vue-electron-app/agent-transcripts/fe917744-b814-4192-9e29-64f66e8ce3c1/fe917744-b814-4192-9e29-64f66e8ce3c1.jsonl",
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 0,
+      "overriden_lines": 0
+    }
+  }
+}
