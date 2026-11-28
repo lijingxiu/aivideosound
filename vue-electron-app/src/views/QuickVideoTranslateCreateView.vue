@@ -1,6 +1,6 @@
 <template>
   <div class="new-project">
-    <div class="page-head" @click="$router.back()">
+    <div class="page-head" @click="handleBack">
       <button class="back" aria-label="返回" title="返回">‹</button>
       <h2>新增项目</h2>
     </div>
@@ -121,7 +121,7 @@
               </span>
               <div class="segment-setting-row"><span>视频时长动态调整 <el-tooltip content="开启后，将适当延长视频时长，以达到最佳配音效果" placement="top"><i class="setting-info">i</i></el-tooltip></span><el-switch v-model="durationAdjust" active-color="#ed6200"/></div>
               <div class="segment-setting-row"><span>配音时间轴动态调整 <el-tooltip content="开启后，将适当调整配音时间轴信息，均衡配音语速，以达到最佳配音效果（音画必须严格对齐的请关闭）" placement="top"><i class="setting-info">i</i></el-tooltip></span><el-switch v-model="timestampAdjust" active-color="#ed6200"/></div>
-              <div class="voice-library-selector"><AiVoiceLibrary v-model="selectedVoice" :language-id="targetLanguageId" :language-name="targetLanguageName"/></div>
+              <div class="voice-library-selector"><AiVoiceLibrary :key="targetLanguage" v-model="selectedVoice" :language-id="targetLanguageId" :language-name="targetLanguageName"/></div>
             </el-tab-pane>
           </el-tabs>
         </div>
@@ -367,9 +367,36 @@ export default {
     },
     matchedSubtitleCount() {
       return this.subtitleMatchList.filter(item => item.subtitle).length
+    },
+    hasDraftContent() {
+      return Boolean(
+        this.videos.length ||
+        this.projectName.trim() ||
+        this.sourceLanguage ||
+        this.targetLanguage ||
+        this.subtitleFiles.length
+      )
     }
   },
   methods: {
+    async handleBack() {
+      if (this.submitting) return
+      if (!this.hasDraftContent) return this.$router.back()
+      try {
+        await this.$confirm(
+          '你填写的内容尚未提交，离开后将无法保留，已上传的视频和各项设置都会丢失。确定要离开吗？',
+          '离开当前页面？',
+          {
+            confirmButtonText: '放弃并离开',
+            cancelButtonText: '继续编辑',
+            type: 'warning'
+          }
+        )
+        this.$router.back()
+      } catch (e) {
+        // 用户选择继续编辑，停留在当前页面
+      }
+    },
     targetLanguageLabel(language) {
       if (!language) return ''
       return String(language.dubState) === '0' ? `${language.name}（不支持配音）` : language.name
@@ -497,37 +524,41 @@ export default {
       }
     },
     async addVideos(files) {
-      if (this.videos.length + files.length > MAX_VIDEO_COUNT) return alert('单次任务不能超过100个视频');
+      if (this.videos.length + files.length > MAX_VIDEO_COUNT) return this.$alert('单次任务不能超过100个视频', '提示', { type: 'warning' });
       const next = []
+      const invalid = []
       for (const [i, f] of files.entries()) {
         const codec = await this.readVideoCodec(f)
         if (!SUPPORTED_CODECS.includes(codec)) {
           this.$message({message: `${f.name}编码格式不支持`, type: 'warning'})
           continue
         }
+        const objectUrl = URL.createObjectURL(f)
+        const duration = await this.readVideoDuration(objectUrl)
         const e = validateVideoFile({
           ...f,
           name: f.name || f.path || '',
           size: Number(f.size) || 0,
-          duration: Number(f.duration) || 0,
+          duration,
           codec
         })
         if (e.length) {
-          alert(`${f.name}${e.join('，')}，请检查修改`)
+          URL.revokeObjectURL(objectUrl)
+          invalid.push(`${f.name}${e.join('，')}，请检查修改`)
           continue
         }
-        const objectUrl = URL.createObjectURL(f)
         next.push({
           id: `${Date.now()}-${i}-${Math.random().toString(36).slice(2, 8)}`,
           name: f.name,
           size: f.size,
-          duration: f.duration || 0,
+          duration,
           codec,
           objectUrl,
           thumbnail: '',
           file: f
         })
       }
+      if (invalid.length) this.$alert(invalid.join('\n'), '上传校验失败', { type: 'warning' });
       this.videos = [...this.videos, ...next].sort(naturalSort);
       if (!this.activeId) this.activeId = this.videos[0]?.id || ''
 
@@ -622,7 +653,7 @@ export default {
       const media = await this.splitVideo(video)
       try {
         const videoKey = await this.uploadFileWithPolicy(media.muteFile, getFileExt(video.name), media.paths.mutePath)
-        const audioKey = await this.uploadFileWithPolicy(media.audioFile, 'mp3', media.paths.audioPath)
+        const audioKey = await this.uploadFileWithPolicy(media.audioFile, 'm4a', media.paths.audioPath)
         const thumb = await this.createFirstFrameFile(video)
         let thumbUrl
         try {
@@ -682,8 +713,8 @@ export default {
       this.selectedSubtitleName = ''
       this.selectedSubtitleContent = ''
       e.target.value = ''
-      if (!this.subtitleFiles.length) return alert('所选文件夹中没有 srt 字幕文件，请重新选择')
-      if (ignored) alert(`已自动过滤 ${ignored} 个非 srt 文件，仅保留 srt 字幕`)
+      if (!this.subtitleFiles.length) return this.$alert('所选文件夹中没有 srt 字幕文件，请重新选择', '提示', { type: 'warning' })
+      if (ignored) this.$alert(`已自动过滤 ${ignored} 个非 srt 文件，仅保留 srt 字幕`, '提示', { type: 'warning' })
     },
     showSubtitleMatches() {
       this.subtitleMatchVisible = true
@@ -770,6 +801,7 @@ export default {
           bold: burnSettings.bold,
           positionPercentage: Number(burnSettings.position)
         } : null
+        const dubType = this.dubbingEnabled ? (this.dubbingTab === 'clone' ? 1 : this.dubbingTab === 'match' ? 2 : 3) : 0
         await submitProjectTask({
           name: this.projectName,
           fromLangCode: this.sourceLanguage,
@@ -777,7 +809,8 @@ export default {
           transType: this.translationSource === 'upload' ? 2 : 1,
           ...(this.translationSource !== 'upload' ? {subtitleType: {asr: 1, ocr: 2}[this.subtitleSource]} : {}),
           ...(this.translationSource !== 'upload' ? {transDictType: this.dictionarySettings.enabled ? 1 : 0} : {}),
-          dubType: this.dubbingEnabled ? (this.dubbingTab === 'clone' ? 1 : this.dubbingTab === 'match' ? 2 : 3) : 0,
+          dubType,
+          ...(dubType === 3 ? {dubSpeakerId: this.selectedVoice?.id ?? ''} : {}),
           dubVideoAdjust: this.dubbingEnabled && this.durationAdjust ? 1 : 0,
           dubAudioAdjust: this.dubbingEnabled && this.timestampAdjust ? 1 : 0,
           removeBgAudio: {keep: 0, music: 1, all: 2}[this.backgroundAudio],

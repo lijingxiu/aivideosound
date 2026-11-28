@@ -2,7 +2,7 @@
   <div class="burn">
     <div class="controls"><label class="font-select">字体
       <el-select v-model="settings.font" size="mini" @change="resetFontSize">
-        <el-option v-for="font in fontList" :key="font.key" :label="font.name" :value="font.key"/>
+        <el-option v-for="font in normalizedFontList" :key="font.key" :label="font.name" :value="font.key"/>
       </el-select>
     </label><label class="size-select">字号
       <el-select v-model="settings.size" size="mini">
@@ -53,6 +53,12 @@ export default {
     }
   }),
   computed: {
+    normalizedFontList() {
+      return this.fontList.map(font => ({
+        ...font,
+        key: typeof font.key === 'string' ? font.key.trim() : font.key
+      }))
+    },
     fontSizes() {
       return Array.from({length: 23}, (_, index) => 12 + index * 4)
     },
@@ -67,7 +73,7 @@ export default {
         this.$emit('input', { ...settings })
       }
     },
-    fontList: {
+    normalizedFontList: {
       immediate: true,
       handler(fontList) {
         if (!fontList.length) return
@@ -84,19 +90,20 @@ export default {
   },
   methods: {
     resetFontSize(fontKey) {
-      const font = this.fontList.find(item => item.key === fontKey)
+      const font = this.normalizedFontList.find(item => item.key === fontKey)
       if (font) this.settings.size = font.size
     },
     registerFonts() {
       const head = document.head || document.getElementsByTagName('head')[0]
-      this.fontList.forEach(font => {
+      this.normalizedFontList.forEach(font => {
         if (!font.key) return
         const id = `font-face-${font.key}`
         if (document.getElementById(id)) return
-        const hasExt = /\.(ttf|otf|woff2?|eot|ttc)$/i.test(font.key)
-        const src = hasExt
-          ? `url('./fonts/${font.key}')`
-          : `url('./fonts/${font.key}.ttf') format('truetype'), url('./fonts/${font.key}.otf') format('opentype')`
+        // 直接取字体 url 最后一段的文件名（去掉扩展名/查询串），对应本地 public/fonts 下的同名文件；
+        // url 扩展名与本地不一定一致（如 url 是 .ttf、本地是 .otf），故同时提供 .ttf / .otf
+        const rawName = String(font.url || '').split('/').pop().split(/[?#]/)[0]
+        const fileBase = (rawName || String(font.key).replace(/\s+/g, '')).replace(/\.(ttf|otf|woff2?|eot|ttc)$/i, '')
+        const src = `url('./fonts/${fileBase}.ttf') format('truetype'), url('./fonts/${fileBase}.otf') format('opentype')`
         const style = document.createElement('style')
         style.id = id
         style.textContent = `@font-face { font-family: '${font.key}'; src: ${src}; }`
@@ -127,42 +134,56 @@ export default {
 
 .controls:first-child {
   justify-content: flex-start;
-  gap: 10px;
+  gap: 6px;
 }
 
 .controls + .controls {
-  margin-top: 14px;
+  margin-top: 8px;
 }
 
 .style-controls {
   justify-content: flex-start;
   flex-wrap: nowrap;
-  gap: 16px;
-}
-
-.style-color {
-  gap: 8px !important;
+  gap: 8px;
 }
 
 .style-controls .stroke-width {
   margin-left: 0;
 }
 
+.background-control {
+  gap: 4px;
+}
+
 .background-control ::v-deep .el-radio {
-  margin-right: 2px;
+  margin-right: 0;
 }
 
 .background-control ::v-deep .el-radio__label {
   padding-left: 2px;
 }
 
-.stroke-width ::v-deep .el-select {
-  width: 48px;
+.style-color {
+  gap: 4px !important;
+}
+
+.style-color input[type=color] {
+  width: 24px;
+}
+
+.stroke-width ::v-deep .el-select,
+.stroke-width ::v-deep .el-input {
+  width: 60px;
+  min-width: 60px;
+}
+
+.stroke-width ::v-deep .el-input__inner {
+  padding-right: 22px;
 }
 
 .position-control {
   justify-content: flex-start;
-  gap: 12px;
+  gap: 6px;
 }
 
 .position-control label {

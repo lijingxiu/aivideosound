@@ -147,6 +147,7 @@ import AppLayout from '@/components/layout/AppLayout.vue'
 import SubmitProgressModal from '@/components/project/SubmitProgressModal.vue'
 import {fetchOriginalList, fetchProjectList, getOriginalUploadPolicy, submitOriginal} from '@/api/project'
 import {validateVideoFile, formatValidationMessage, getFileExt, getBaseName} from '@/utils/videoValidator'
+import {MAX_VIDEO_COUNT} from '@/constants/project'
 
 const StatusPill = {
   props: ['value', 'map'],
@@ -363,14 +364,14 @@ export default {
       const muteBytes = await api.readTempFile(paths.mutePath)
       const audioBytes = await api.readTempFile(paths.audioPath)
       const muteFile = new File([muteBytes], `video-mute.${getFileExt(video.name)}`, {type: video.file?.type || 'video/mp4'})
-      const audioFile = new File([audioBytes], `${getBaseName(video.name)}.mp3`, {type: 'audio/mpeg'})
+      const audioFile = new File([audioBytes], `${getBaseName(video.name)}.m4a`, {type: 'audio/mp4'})
       return {paths, muteFile, audioFile}
     },
     async uploadVideo(video) {
       const media = await this.splitVideo(video)
       try {
         const videoKey = await this.uploadFileWithPolicy(media.muteFile, getFileExt(video.name), media.paths.mutePath)
-        const audioKey = await this.uploadFileWithPolicy(media.audioFile, 'mp3', media.paths.audioPath)
+        const audioKey = await this.uploadFileWithPolicy(media.audioFile, 'm4a', media.paths.audioPath)
         return {
           name: video.name,
           videoMuteUrl: videoKey,
@@ -384,14 +385,19 @@ export default {
       }
     },
     async uploadMaterials(files) {
+      if (files.length > MAX_VIDEO_COUNT) {
+        await this.$alert(`单次最多上传${MAX_VIDEO_COUNT}个文件`, '提示', { type: 'warning' })
+        return
+      }
       const valid = []
+      const invalid = []
       for (const file of files) {
         const objectUrl = URL.createObjectURL(file)
         const duration = await this.readVideoDuration(objectUrl)
         URL.revokeObjectURL(objectUrl)
         const errors = validateVideoFile({name: file.name, size: file.size, duration})
         if (errors.length) {
-          alert(formatValidationMessage(file.name, errors))
+          invalid.push(formatValidationMessage(file.name, errors))
           continue
         }
         valid.push({
@@ -401,6 +407,9 @@ export default {
           duration,
           file
         })
+      }
+      if (invalid.length) {
+        await this.$alert(invalid.join('\n'), '上传校验失败', { type: 'warning' })
       }
       if (!valid.length) return
 
@@ -425,7 +434,7 @@ export default {
       } catch (e) {
         this.uploading = false
         this.uploadStatus = 'active'
-        alert(e.message || '上传素材失败，请稍后重试')
+        await this.$alert(e.message || '上传素材失败，请稍后重试', '上传失败', { type: 'error' })
       }
     }
   }

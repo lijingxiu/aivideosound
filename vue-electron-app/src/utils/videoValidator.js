@@ -21,6 +21,7 @@ export function getBaseName(name) {
 export function validateVideoFile(video) {
   const errors = []
   const ext = getFileExt(video.name)
+  const duration = Number(video.duration)
 
   if (!SUPPORTED_VIDEO_EXT.includes(ext)) {
     errors.push('格式不支持')
@@ -28,11 +29,11 @@ export function validateVideoFile(video) {
   if (video.size > MAX_VIDEO_SIZE) {
     errors.push('已超过1G')
   }
-  if (video.duration > MAX_VIDEO_DURATION) {
+  if (duration > MAX_VIDEO_DURATION) {
     errors.push('已超过60分钟')
   }
-  if (video.duration > 0 && video.duration < MIN_VIDEO_DURATION) {
-    errors.push('时长不足10秒')
+  if (Number.isFinite(duration) && duration > 0 && duration <= MIN_VIDEO_DURATION) {
+    errors.push('时长必须大于10秒')
   }
   if (video.codec && !SUPPORTED_CODECS.includes(video.codec.toLowerCase())) {
     errors.push('编码格式不支持')

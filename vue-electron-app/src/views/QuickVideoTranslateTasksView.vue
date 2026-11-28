@@ -21,7 +21,7 @@
       <section class="content-card">
         <div class="toolbar">
           <div class="toolbar-actions">
-            <button :disabled="!selectedIds.length || exporting" @click="batchExport">批量导出</button>
+            <button :disabled="!selectedIds.length" @click="batchExport">批量导出</button>
             <button :disabled="!selectedIds.length" @click="batchDelete">批量删除</button>
           </div>
           <div class="filters">
@@ -115,7 +115,7 @@
               </td>
               <td>{{ formatCreateTime(task.updateTime || task.update_time || task.modifyTime || task.modifiedTime || task.createTime) }}</td>
               <td class="actions">
-                <button :disabled="exporting" @click="exportTask(task)">导出</button>
+                <button :disabled="!isTaskSucceeded(task)" @click="exportTask(task)">导出</button>
                 <button @click="deleteTask(task)">删除</button>
               </td>
             </tr>
@@ -158,7 +158,6 @@
               </span>
             </div>
           </div>
-          <p class="export-note">注：状态未成功的任务将自动跳过导出；仅成功的任务在导出失败时可点击重试</p>
           <div class="export-actions">
             <button class="stop-button" @click="onStopExport">
               {{ exportRunning ? '停止导出' : '关闭' }}
@@ -199,6 +198,7 @@ export default {
       exportRunning: false,
       stopExportRequested: false,
       exporting: false,
+      exportProjectId: '',
       searchTimer: null,
       transStates: {
         '-1': {label: '未开始', type: 'pending'},
@@ -237,9 +237,12 @@ export default {
     enabledStatuses() {
       const info = this.projectInfo || {}
       const enabled = value => value === true || Number(value) > 0 || value === 'true'
-      const statuses = ['翻译']
-      if (enabled(info.dubType)) statuses.push('配音')
-      if (enabled(info.removeBgAudio)) statuses.push('去除背景音')
+      const transLabels = {1: '智能翻译', 2: '上传字幕'}
+      const dubLabels = {1: '原声克隆', 2: '智能配音', 3: '手动选择'}
+      const bgLabels = {1: '仅去除背景音', 2: '去除背景音及音效'}
+      const statuses = [transLabels[info.transType] || '翻译']
+      if (enabled(info.dubType)) statuses.push(dubLabels[info.dubType] || '配音')
+      if (enabled(info.removeBgAudio)) statuses.push(bgLabels[info.removeBgAudio] || '去除背景音')
       if (enabled(info.eraseType)) statuses.push('字幕擦除')
       if (enabled(info.burnSubtitleType)) statuses.push('字幕压制')
       return statuses
@@ -393,8 +396,12 @@ export default {
       return days >= 1 ? `${days}天` : `${Math.ceil(diff / 3600000)}小时`
     },
     async exportTask(task) {
-      if (this.exporting) return
+      if (this.exporting) {
+        this.$message.warning('有文件正在导出中')
+        return
+      }
       this.exporting = true
+      this.exportProjectId = this.projectId
       this.exportRunning = true
       this.exportVisible = true
       this.exportFloating = false
@@ -417,15 +424,18 @@ export default {
       }
     },
     async batchExport() {
-      if (this.exporting || !this.selectedIds.length) return
+      if (this.exporting) {
+        this.$message.warning('有文件正在导出中')
+        return
+      }
+      if (!this.selectedIds.length) return
       const selectedTasks = this.selectedIds.map(id => this.tasks.find(item => item.id === id)).filter(Boolean)
-      try {
-        await this.$confirm(`确定要批量导出选中的 ${selectedTasks.length} 个视频吗`, '提示', {type: 'warning'})
-      } catch (error) {
-        if (error !== 'cancel' && error !== 'close') this.notify(error.message || '导出失败')
+      if (selectedTasks.some(task => !this.isTaskSucceeded(task))) {
+        this.$message.warning('仅状态为成功的任务可以导出，请检查。')
         return
       }
       this.exporting = true
+      this.exportProjectId = this.projectId
       this.exportRunning = true
       this.exportVisible = true
       this.stopExportRequested = false
@@ -441,10 +451,7 @@ export default {
         this.exportRunning = false
         this.exportQueue = this.exportQueue.map(item => {
           if (item.label !== '等待中') return item
-          const t = this.tasks.find(x => String(x.id) === String(item.id))
-          return String(t?.state) === '1'
-            ? {...item, label: '失败', type: 'fail', reason: '已停止导出'}
-            : {...item, label: '跳过', type: 'skip', reason: '任务未成功，已跳过导出'}
+          return {...item, label: '失败', type: 'fail', reason: '已停止导出'}
         })
         this.persistExportState()
       }
@@ -492,6 +499,7 @@ export default {
             this.exportQueue = Array.isArray(state.queue) ? state.queue : []
             this.exportRunning = Boolean(state.running)
             this.exporting = Boolean(state.running)
+            this.exportProjectId = state.projectId || ''
           }
         }
       } catch (error) {
@@ -505,7 +513,7 @@ export default {
           floating: this.exportFloating,
           running: this.exportRunning,
           queue: this.exportQueue,
-          projectId: this.projectId
+          projectId: this.exportProjectId || this.projectId
         }))
         window.dispatchEvent(new Event('qvt-export-state-change'))
       } catch (error) {
@@ -533,10 +541,12 @@ export default {
       }
     },
     async openExportFolder() {
+      this.exportVisible = false
+      this.persistExportState()
       const api = window.electronAPI
       if (!api?.openExportFolder) return this.notify('当前客户端不支持打开导出目录')
       try {
-        await api.openExportFolder(this.projectId)
+        await api.openExportFolder(this.exportProjectId || this.projectId)
       } catch (error) {
         this.notify(error.message || '打开导出目录失败')
       }
@@ -577,7 +587,7 @@ export default {
       try {
         await api.exportBurnVideo({
           taskId: task.id,
-          projectId: this.projectId,
+          projectId: this.exportProjectId || this.projectId,
           materialName: task.name || String(task.id),
           videoUrl,
           audioUrl,
@@ -1047,7 +1057,7 @@ input[type='checkbox'] {
 .actions {
   button {
     margin: 0 3px;
-    color: $muted;
+    color: #1f2733;
     font-size: 12px;
     cursor: pointer;
 
@@ -1057,6 +1067,11 @@ input[type='checkbox'] {
 
     &:hover {
       color: $orange;
+    }
+
+    &:disabled {
+      color: #c0c6cf;
+      cursor: not-allowed;
     }
   }
 }
@@ -1231,14 +1246,8 @@ input[type='checkbox'] {
   }
 }
 
-.export-note {
-  margin: 16px 0 22px;
-  color: #667085;
-  font-size: 13px;
-  text-align: center;
-}
-
 .export-actions {
+  margin-top: 25px;
   display: flex;
   justify-content: space-between;
   gap: 16px;
@@ -1254,7 +1263,8 @@ input[type='checkbox'] {
 }
 
 .stop-button {
-  color: #e5484d;
+  color: #667085;
+  border-color: #667085 !important;
   background: #fff;
 
   &:disabled {
@@ -1264,9 +1274,14 @@ input[type='checkbox'] {
 }
 
 .view-button {
-  color: #344054;
-  border-color: #d0d5dd !important;
-  background: #fff;
+  color: #fff;
+  border-color: $orange !important;
+  background: $orange;
+
+  &:hover {
+    background: #d95800;
+    border-color: #d95800 !important;
+  }
 }
 
 @media (max-width: 1100px) {

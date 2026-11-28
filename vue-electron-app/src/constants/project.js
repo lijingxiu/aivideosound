@@ -20,7 +20,7 @@ export const SUBTITLE_SOURCES = [
   {
     value: 'upload',
     label: '上传字幕',
-    tooltip: '4积分/分钟，选择SRT字幕所在文件夹，自动匹配与视频文件同名的字幕文件'
+    tooltip: '4积分/分钟，选择SRT字幕文件，自动匹配同名的视频文件'
   }
 ]
 
@@ -33,4 +33,4 @@ export const POINTS_PER_30S = {
   subtitleErase: 100
 }
 
-export const UPLOAD_TOOLTIP = '单次任务不能超过100个视频，单个视频限制：≤1G，≥10秒，≤60分钟'
+export const UPLOAD_TOOLTIP = '单次最多100个文件 | 单个视频 ≤1G | ≤60分钟 | >10秒'

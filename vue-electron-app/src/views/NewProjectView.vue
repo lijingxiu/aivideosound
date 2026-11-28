@@ -307,24 +307,29 @@ export default {
       }
     },
     async addVideos(files) {
-      if (this.videos.length + files.length > MAX_VIDEO_COUNT) return alert('单次任务不能超过100个视频');
-      const next = files.map((f, i) => {
-        const e = validateVideoFile(f);
-        if (e.length) {
-          alert(`${f.name}${e.join('，')}，请检查修改`);
-          return null
-        }
+      if (this.videos.length + files.length > MAX_VIDEO_COUNT) return this.$alert('单次任务不能超过100个视频', '提示', { type: 'warning' });
+      const invalid = []
+      const next = []
+      for (const [i, f] of files.entries()) {
         const objectUrl = URL.createObjectURL(f)
-        return {
+        const duration = await this.readVideoDuration(objectUrl)
+        const e = validateVideoFile({...f, duration});
+        if (e.length) {
+          URL.revokeObjectURL(objectUrl)
+          invalid.push(`${f.name}${e.join('，')}，请检查修改`)
+          continue
+        }
+        next.push({
           id: `${Date.now()}-${i}-${Math.random().toString(36).slice(2, 8)}`,
           name: f.name,
           size: f.size,
-          duration: f.duration || 0,
+          duration,
           objectUrl,
           thumbnail: '',
           file: f
-        }
-      }).filter(Boolean);
+        })
+      }
+      if (invalid.length) this.$alert(invalid.join('\n'), '上传校验失败', { type: 'warning' });
       this.videos = [...this.videos, ...next].sort(naturalSort);
       if (!this.activeId) this.activeId = this.videos[0]?.id || ''
 
@@ -371,7 +376,7 @@ export default {
       const muteBytes = await api.readTempFile(paths.mutePath)
       const audioBytes = await api.readTempFile(paths.audioPath)
       const muteFile = new File([muteBytes], `video-mute.${getFileExt(video.name)}`, {type: video.file?.type || 'video/mp4'})
-      const audioFile = new File([audioBytes], `${getBaseName(video.name)}.mp3`, {type: 'audio/mpeg'})
+      const audioFile = new File([audioBytes], `${getBaseName(video.name)}.m4a`, {type: 'audio/mp4'})
       return { paths, muteFile, audioFile }
     },
     async getUploadFile(video) {
@@ -384,7 +389,7 @@ export default {
       const media = await this.splitVideo(video)
       try {
         const videoKey = await this.uploadFileWithPolicy(media.muteFile, getFileExt(video.name), media.paths.mutePath)
-        const audioKey = await this.uploadFileWithPolicy(media.audioFile, 'mp3', media.paths.audioPath)
+        const audioKey = await this.uploadFileWithPolicy(media.audioFile, 'm4a', media.paths.audioPath)
         return {
           name: video.name,
           videoMuteUrl: videoKey,
@@ -434,8 +439,8 @@ export default {
       this.selectedSubtitleName = ''
       this.selectedSubtitleContent = ''
       e.target.value = ''
-      if (!this.subtitleFiles.length) return alert('所选文件夹中没有 srt 字幕文件，请重新选择')
-      if (ignored) alert(`已自动过滤 ${ignored} 个非 srt 文件，仅保留 srt 字幕`)
+      if (!this.subtitleFiles.length) return this.$alert('所选文件夹中没有 srt 字幕文件，请重新选择', '提示', { type: 'warning' })
+      if (ignored) this.$alert(`已自动过滤 ${ignored} 个非 srt 文件，仅保留 srt 字幕`, '提示', { type: 'warning' })
     },
     showSubtitleMatches() {
       this.subtitleMatchVisible = true
@@ -454,9 +459,9 @@ export default {
       reader.readAsText(file)
     },
     async submit() {
-      if (!this.projectName) return alert('请输入项目名称');
-      if (!this.sourceLanguage) return alert('请选择源语言');
-      if (this.subtitleSource === 'upload' && !this.subtitleFiles.length) return alert('请选择字幕文件所在位置');
+      if (!this.projectName) return this.$alert('请输入项目名称', '提示', { type: 'warning' });
+      if (!this.sourceLanguage) return this.$alert('请选择源语言', '提示', { type: 'warning' });
+      if (this.subtitleSource === 'upload' && !this.subtitleFiles.length) return this.$alert('请选择字幕文件所在位置', '提示', { type: 'warning' });
       try {
         // const r = await fetchUserPoints();
         // const points = Number(r?.points ?? r?.data?.points ?? this.$store.state.user?.points ?? 0);
@@ -496,7 +501,7 @@ export default {
       } catch (e) {
         this.submitting = false;
         this.status = 'active';
-        alert(e.message || '提交失败，请稍后重试')
+        await this.$alert(e.message || '提交失败，请稍后重试', '提交失败', { type: 'error' })
       }
     }
   }

@@ -13,8 +13,8 @@
           <div class="filter-head"><span>已为您筛选支持「{{ languageName || languageId || '目标语言' }}」的AI音色</span><label><input v-model="withMulti" type="checkbox" @change="loadList">叠加显示支持多语种的音色 <el-tooltip content="当前语种对应音色较少时，可勾选叠加显示更多音色" placement="top">
             <i>i</i>
           </el-tooltip> </label></div>
-          <div class="filters"><input v-model="keyword" placeholder="输入关键词搜索" @input="searchDebounced"><select v-model="gender" @change="loadList"><option value="">全部性别</option><option value="1">男</option><option value="2">女</option></select><select v-model="age" @change="loadList"><option value="">全部年龄</option><option value="1">少年</option><option value="2">青年</option><option value="3">中年</option><option value="4">老年</option></select></div>
-          <div class="speaker-list" @scroll="handleScroll">
+          <div class="filters"><input class="search-input" v-model="keyword" placeholder="输入关键词搜索" @input="searchDebounced"><el-select v-model="gender" class="filter-select" placeholder="全部性别" popper-class="voice-filter-popper" @change="loadList"><el-option label="全部性别" value=""></el-option><el-option label="男" value="1"></el-option><el-option label="女" value="2"></el-option></el-select><el-select v-model="age" class="filter-select" placeholder="全部年龄" popper-class="voice-filter-popper" @change="loadList"><el-option label="全部年龄" value=""></el-option><el-option label="少年" value="1"></el-option><el-option label="青年" value="2"></el-option><el-option label="中年" value="3"></el-option><el-option label="老年" value="4"></el-option></el-select></div>
+          <div class="speaker-list">
             <article v-for="speaker in speakers" :key="speaker.id" class="speaker-card">
               <button class="avatar" type="button" :aria-label="`试听${speaker.name}`" @click="toggleAudio(speaker)"><img v-if="speaker.headUrl" :src="speaker.headUrl" :alt="speaker.name"><span v-else>♫</span><i>{{ playingId === speaker.id ? 'Ⅱ' : '▶' }}</i></button>
               <div class="speaker-info"><div class="speaker-title">{{ speaker.name }} <span v-if="speaker.language" class="tag language">{{ speaker.language }}</span><span v-if="speaker.isMulti" class="tag multi">多语种</span></div><p>{{ speaker.descr || '暂无描述' }}</p></div>
@@ -22,7 +22,7 @@
               <button class="favorite" :class="{favorited: speaker.favId > 0}" :aria-label="speaker.favId > 0 ? '取消收藏' : '收藏'" @click="toggleFavorite(speaker)">{{ speaker.favId > 0 ? '★' : '☆' }}</button>
               <button class="use-button" :class="{'is-selected': selectedSpeaker && selectedSpeaker.id === speaker.id}" @click="selectSpeaker(speaker)">{{ selectedSpeaker && selectedSpeaker.id === speaker.id ? '使用中' : '使用' }}</button>
             </article>
-            <div v-if="loading" class="list-state">加载中…</div><div v-else-if="!speakers.length" class="list-state">暂无符合条件的音色</div>
+            <div v-if="!loading && !speakers.length" class="list-state">暂无符合条件的音色</div>
           </div>
         </div>
       </section>
@@ -40,7 +40,21 @@ export default {
   data: () => ({ visible: false, tab: 'all', speakers: [], selectedSpeaker: null, keyword: '', gender: '', age: '', withMulti: false, loading: false, playingId: null, searchTimer: null, requestId: 0 }),
   watch: {
     value: { immediate: true, handler(value) { this.selectedSpeaker = value || null } },
-    languageId() { this.speakers = []; this.selectedSpeaker = null; this.$emit('input', null); if (this.visible) this.loadList() }
+    languageId() {
+      clearTimeout(this.searchTimer)
+      this.tab = 'all'
+      this.keyword = ''
+      this.gender = ''
+      this.age = ''
+      this.withMulti = false
+      this.speakers = []
+      this.selectedSpeaker = null
+      this.playingId = null
+      this.$refs.audio?.pause()
+      this.loading = false
+      this.$emit('input', null)
+      if (this.visible) this.loadList()
+    }
   },
   beforeDestroy() { clearTimeout(this.searchTimer); this.$refs.audio?.pause() },
   methods: {
@@ -54,8 +68,8 @@ export default {
       this.loadList()
     },
     close() { this.visible = false; this.$refs.audio?.pause() },
-    changeTab(tab) { if (this.tab !== tab) { this.tab = tab; this.speakers = []; this.loadList() } },
-    searchDebounced() { clearTimeout(this.searchTimer); this.searchTimer = setTimeout(() => { this.speakers = []; this.loadList() }, 300) },
+    changeTab(tab) { if (this.tab !== tab) { this.tab = tab; this.loadList() } },
+    searchDebounced() { clearTimeout(this.searchTimer); this.searchTimer = setTimeout(() => this.loadList(), 300) },
     async loadList() {
       if (!this.languageId) { this.speakers = []; return }
       const requestId = ++this.requestId
@@ -90,8 +104,7 @@ export default {
       audio.src = speaker.auditionUrl; audio.play().then(() => { this.playingId = speaker.id }).catch(() => this.$message?.warning('试听播放失败'))
     },
     selectSpeaker(speaker) { this.selectedSpeaker = speaker; this.$emit('input', speaker); this.$emit('select', speaker); this.close() },
-    ageLabel(age) { return ({ 1: '少年', 2: '青年', 3: '中年', 4: '老年' })[age] || '—' },
-    handleScroll(event) { const el = event.target; if (el.scrollTop + el.clientHeight >= el.scrollHeight - 40 && !this.loading && this.speakers.length) this.loadList() }
+    ageLabel(age) { return ({ 1: '少年', 2: '青年', 3: '中年', 4: '老年' })[age] || '—' }
   }
 }
 </script>
@@ -242,41 +255,82 @@ export default {
   grid-template-columns: 2fr 1fr 1fr;
   gap: 10px;
   margin-bottom: 12px;
+}
 
-  input,
-  select {
-    box-sizing: border-box;
-    min-width: 0;
+.search-input {
+  box-sizing: border-box;
+  min-width: 0;
+  width: 100%;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid #e4e4e4;
+  border-radius: 4px;
+  outline: none;
+  background: #fff;
+  color: #555;
+  font: inherit;
+  font-size: 13px;
+  transition: border-color .15s;
+
+  &:focus {
+    border-color: #ed6200;
+  }
+
+  &::placeholder {
+    color: #b5b5b5;
+  }
+}
+
+.filter-select {
+  width: 100%;
+
+  ::v-deep .el-input {
+    width: 100%;
+  }
+
+  ::v-deep .el-input__inner {
     height: 32px;
-    padding: 0 10px;
+    line-height: 32px;
+    padding: 0 28px 0 10px;
     border: 1px solid #e4e4e4;
     border-radius: 4px;
-    outline: none;
     background: #fff;
     color: #555;
-    font: inherit;
     font-size: 13px;
     transition: border-color .15s;
 
+    &:hover,
     &:focus {
       border-color: #ed6200;
     }
-
-    &::placeholder {
-      color: #b5b5b5;
-    }
   }
 
-  select {
-    padding-right: 6px;
-    cursor: pointer;
+  ::v-deep .el-input__icon {
+    display: flex;
+    align-items: center;
+    height: 100%;
+    line-height: 32px;
+  }
+
+  ::v-deep .el-input .el-select__caret {
+    color: #999;
+    font-size: 13px;
+  }
+
+  ::v-deep .el-input__inner::placeholder {
+    color: #b5b5b5;
+  }
+
+  ::v-deep .el-input.is-focus .el-input__inner {
+    border-color: #ed6200;
   }
 }
 
 .speaker-list {
-  min-height: 0;
-  max-height: min(56vh, 520px);
+  box-sizing: border-box;
+  height: min(56vh, 520px);
   overflow-y: auto;
+  scrollbar-gutter: stable;
   border: 1px solid #e8e8e8;
   border-radius: 6px;
 }
@@ -477,6 +531,25 @@ export default {
 
   .speaker-card > .demographic {
     display: none;
+  }
+}
+</style>
+<style lang="scss">
+.voice-filter-popper {
+  z-index: 3100 !important;
+
+  .el-select-dropdown__item {
+    color: #555;
+    font-size: 13px;
+  }
+
+  .el-select-dropdown__item.hover,
+  .el-select-dropdown__item:hover {
+    background-color: #fff7f0;
+  }
+
+  .el-select-dropdown__item.selected {
+    color: #ed6200;
   }
 }
 </style>

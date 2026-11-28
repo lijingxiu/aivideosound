@@ -3,9 +3,7 @@
     <div class="quick-translate-page">
       <div class="toolbar">
         <div class="search-box">
-          <AppIcon name="search" :size="16" color="#aaa" />
-          <input v-model="searchKeyword" type="text" placeholder="输入项目名称搜索" @keyup.enter="loadProjects" />
-          <button type="button" @click="loadProjects">搜索</button>
+          <el-input v-model="searchKeyword" placeholder="输入项目名称搜索" @input="handleSearchInput" size="small" class="search-input" />
         </div>
         <button class="btn-add" type="button" @click="$router.push({ name: 'quick-video-translate-new' })">
           <AppIcon name="plus" :size="16" color="#fff" />
@@ -14,71 +12,72 @@
       </div>
 
       <div class="table-wrap">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>项目名称</th>
-              <th>源语言</th>
-              <th>目标语言</th>
-              <th>素材数量</th>
-              <th>翻译方式</th>
-              <th>配音</th>
-              <th>去除背景音</th>
-              <th>字幕压制</th>
-              <th>字幕擦除</th>
-              <th>
-                <span class="th-tip-wrap">
-                  有效期剩余
-                  <span class="tip-icon" tabindex="0" aria-label="有效期说明">
-                    i
-                    <span class="tip-bubble">{{ expireTip }}</span>
-                  </span>
-                </span>
-              </th>
-              <th>创建时间</th>
-              <th>备注</th>
-              <th>操作</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="project in projectRows" :key="project.id">
-              <td>
-                <div class="project-name" role="link" tabindex="0" @click="enterProject(project)" @keyup.enter="enterProject(project)">
-                  <AppIcon name="folder" :size="18" color="#ff7a00" />{{ project.name }}
-                </div>
-              </td>
-              <td>{{ project.sourceLanguage }}</td>
-              <td>{{ project.targetLanguage }}</td>
-              <td>{{ project.materialCount }}</td>
-              <td :title="project.translationDetail">{{ project.translation }}</td>
-              <td :title="project.voiceoverDetail">{{ project.voiceover }}</td>
-              <td :title="project.backgroundRemovalDetail">{{ project.backgroundRemoval }}</td>
-              <td>{{ project.burnSubtitle }}</td>
-              <td>{{ project.subtitleErasure }}</td>
-              <td :title="project.expireTime">{{ project.remaining }}</td>
-              <td>{{ project.createTime }}</td>
-              <td :title="project.remark">{{ project.remark || '-' }}</td>
-              <td>
-                <div class="row-actions">
-                  <a class="action-enter" href="#" @click.prevent="enterProject(project)">进入</a>
-                  <div class="more-menu-wrap">
-                    <button type="button" class="action-more" aria-label="更多操作"
-                            :aria-expanded="activeProjectMenu === project.id"
-                            @click.stop="toggleProjectMenu(project.id)">···</button>
-                    <div v-if="activeProjectMenu === project.id" class="more-menu" @click.stop>
-                      <button type="button" @click="openEditProject(project)">重命名</button>
-                      <button type="button" @click="openRemarkProject(project)">备注</button>
-                      <button type="button" @click="confirmDeleteProject(project)">删除</button>
-                    </div>
+        <el-table :data="projectRows" border size="small" class="data-table">
+          <el-table-column prop="name" label="项目名称" min-width="180">
+            <template #default="scope">
+              <div class="project-name" role="link" tabindex="0" @click="enterProject(scope.row)" @keyup.enter="enterProject(scope.row)">
+                <AppIcon name="folder" :size="18" color="#ff7a00" />{{ scope.row.name }}
+              </div>
+            </template>
+          </el-table-column>
+          <el-table-column prop="sourceLanguage" label="源语言" min-width="80" />
+          <el-table-column prop="targetLanguage" label="目标语言" min-width="80" />
+          <el-table-column prop="materialCount" label="素材数量" min-width="80" />
+          <el-table-column label="翻译方式" min-width="100">
+            <template #default="scope">{{ scope.row.translation }}</template>
+          </el-table-column>
+          <el-table-column label="配音" min-width="100">
+            <template #default="scope">{{ scope.row.voiceover }}</template>
+          </el-table-column>
+          <el-table-column label="去除背景音" min-width="110">
+            <template #default="scope">{{ scope.row.backgroundRemoval }}</template>
+          </el-table-column>
+          <el-table-column label="字幕压制" min-width="90">
+            <template #default="scope">{{ scope.row.burnSubtitle }}</template>
+          </el-table-column>
+          <el-table-column label="字幕擦除" min-width="90">
+            <template #default="scope">{{ scope.row.subtitleErasure }}</template>
+          </el-table-column>
+          <el-table-column prop="remaining" label="有效期剩余" min-width="100">
+            <template #default="scope">
+              <span :title="scope.row.expireTime">{{ scope.row.remaining }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="createTime" label="创建时间" min-width="150" />
+          <el-table-column label="备注" min-width="120">
+            <template #default="scope">{{ scope.row.remark || '-' }}</template>
+          </el-table-column>
+          <el-table-column label="操作" min-width="140" fixed="right">
+            <template #default="scope">
+              <div class="row-actions">
+                <a class="action-enter" href="#" @click.prevent="enterProject(scope.row)">进入</a>
+                <div class="more-menu-wrap">
+                  <button type="button" class="action-more" aria-label="更多操作"
+                          :aria-expanded="activeProjectMenu === scope.row.id"
+                          @click.stop="toggleProjectMenu(scope.row.id)">···</button>
+                  <div v-if="activeProjectMenu === scope.row.id" class="more-menu" @click.stop>
+                    <button type="button" @click="openEditProject(scope.row)">重命名</button>
+                    <button type="button" @click="openRemarkProject(scope.row)">备注</button>
+                    <button type="button" @click="confirmDeleteProject(scope.row)">删除</button>
                   </div>
                 </div>
-              </td>
-            </tr>
-            <tr v-if="!projects.length">
-              <td :colspan="columns.length" class="empty-row">暂无项目</td>
-            </tr>
-          </tbody>
-        </table>
+              </div>
+            </template>
+          </el-table-column>
+        </el-table>
+        <div v-if="!projects.length && !loading" class="empty-row">暂无项目</div>
+      </div>
+
+      <div class="pagination">
+        <el-pagination
+          @current-change="handleCurrentChange"
+          :current-page="currentPage"
+          :page-size="pageSize"
+          :total="total"
+          layout="prev, pager, next"
+          :disabled="loading"
+          background
+        />
       </div>
     </div>
     <div v-if="editProjectVisible" class="edit-modal-mask" @click.self="closeEditProject">
@@ -111,9 +110,11 @@ export default {
   data() {
     return {
       searchKeyword: '',
+      searchTimer: null,
       projects: [],
-      pageOffset: 0,
-      pageLimit: 10,
+      currentPage: 1,
+      pageSize: 10,
+      total: 0,
       loading: false,
       activeProjectMenu: null,
       editProjectVisible: false,
@@ -121,21 +122,6 @@ export default {
       projectEditValue: '',
       editingProject: null,
       updatingProject: false,
-      columns: [
-        { key: 'name', label: '项目名称' },
-        { key: 'sourceLanguage', label: '源语言' },
-        { key: 'targetLanguage', label: '目标语言' },
-        { key: 'materialCount', label: '素材数量' },
-        { key: 'translation', label: '翻译方式' },
-        { key: 'voiceover', label: '配音' },
-        { key: 'backgroundRemoval', label: '去除背景音' },
-        { key: 'burnSubtitle', label: '字幕压制' },
-        { key: 'subtitleErasure', label: '字幕擦除' },
-        { key: 'remaining', label: '有效期剩余' },
-        { key: 'createTime', label: '创建时间' },
-        { key: 'remark', label: '备注' },
-        { key: 'actions', label: '操作' }
-      ],
       expireTip: '每个项目创建后7天内有效，过期会自动删除项目的所有内容，请在过期前及时导出译制视频'
     }
   },
@@ -163,11 +149,19 @@ export default {
       }))
     }
   },
+  beforeDestroy() {
+    clearTimeout(this.searchTimer)
+  },
   created() {
     this.loadProjects()
   },
   activated() {
     this.loadProjects()
+  },
+  watch: {
+    currentPage() {
+      this.loadProjects()
+    }
   },
   methods: {
     async loadProjects() {
@@ -175,15 +169,32 @@ export default {
       try {
         const response = await fetchProjectList({
           name: this.searchKeyword.trim(),
-          pageOffset: this.pageOffset,
-          pageLimit: this.pageLimit
+          pageOffset: this.currentPage - 1,
+          pageLimit: this.pageSize
         })
-        this.projects = response?.data?.data?.list || response?.data?.list || response?.list || []
+        const list = response?.data?.data?.list || response?.data?.list || response?.list || []
+        this.projects = list
+        this.total = response?.data?.page?.recordCount ?? response?.page?.recordCount ?? 0
       } catch (error) {
+        this.projects = []
+        this.total = 0
         if (!error.messageShown) this.$message.error(error.message || '获取项目列表失败')
       } finally {
         this.loading = false
       }
+    },
+    handleSearchInput() {
+      clearTimeout(this.searchTimer)
+      this.searchTimer = setTimeout(() => {
+        if (this.currentPage === 1) {
+          this.loadProjects()
+        } else {
+          this.currentPage = 1
+        }
+      }, 300)
+    },
+    handleCurrentChange(page) {
+      this.currentPage = page
     },
     formatTranslation(project) {
       const labels = { 1: '智能翻译', 2: '上传字幕' }
@@ -297,7 +308,11 @@ export default {
         })
         await deleteFastProject(project.id)
         this.$message.success('项目删除成功')
-        await this.loadProjects()
+        if (this.projects.length === 1 && this.currentPage > 1) {
+          this.currentPage--
+        } else {
+          this.loadProjects()
+        }
       } catch (error) {
         if (error === 'cancel' || error === 'close') return
         if (!error.messageShown) this.$message.error(error.message || '项目删除失败')
@@ -341,24 +356,7 @@ $border: #eee;
 }
 
 .search-box {
-  display: flex;
-  align-items: center;
-  gap: 8px;
   width: 280px;
-  height: 36px;
-  padding: 0 12px;
-  border: 1px solid $border;
-  border-radius: 4px;
-
-  &:focus-within { border-color: $primary; }
-
-  input {
-    flex: 1;
-    min-width: 0;
-    border: 0;
-    outline: 0;
-    font-size: 13px;
-  }
 }
 
 .btn-add {
@@ -379,88 +377,53 @@ $border: #eee;
 .table-wrap {
   flex: 1;
   overflow: auto;
-  border: 1px solid $border;
-  border-radius: 4px;
 }
 
-.data-table {
-  width: 100%;
-  border-collapse: collapse;
+.table-wrap ::v-deep .el-table {
   font-size: 13px;
-  white-space: nowrap;
+}
 
-  th, td {
-    padding: 14px 12px;
-    border-bottom: 1px solid #f0f0f0;
-    text-align: center;
-  }
+.table-wrap ::v-deep .el-table thead th,
+.table-wrap ::v-deep .el-table__header th {
+  background: #f5f5f7;
+  color: #555;
+  font-weight: 500;
+  text-align: center;
+}
 
-  th {
-    position: sticky;
-    top: 0;
-    z-index: 1;
-    background: #f5f5f7;
-    color: #555;
-    font-weight: 500;
-  }
+.table-wrap ::v-deep .el-table .cell,
+.table-wrap ::v-deep .el-table__body-wrapper .cell {
+  text-align: center;
+  border-bottom-color: #f0f0f0;
+}
 
-  .th-tip-wrap {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    vertical-align: middle;
-  }
+.table-wrap ::v-deep .el-table tr:hover td {
+  background: #fafafa;
+}
 
-  .tip-icon {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    background: #e2e2e2;
-    color: #666;
-    font-size: 12px;
-    font-weight: 600;
-    font-style: normal;
-    line-height: 1;
-    cursor: pointer;
-    flex-shrink: 0;
+.pagination ::v-deep .el-pagination {
+  margin-top: 4px;
+}
 
-    &:focus-visible {
-      outline: 2px solid $primary;
-      outline-offset: 2px;
-    }
+.pagination ::v-deep .el-pagination .el-pager li {
+  color: #333;
+}
 
-    .tip-bubble {
-      position: absolute;
-      top: calc(100% + 8px);
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 10;
-      display: none;
-      width: max-content;
-      max-width: 280px;
-      padding: 8px 10px;
-      border-radius: 4px;
-      background: rgba(0, 0, 0, .85);
-      color: #fff;
-      font-size: 12px;
-      font-weight: 400;
-      line-height: 1.5;
-      white-space: normal;
-      text-align: left;
-    }
+.pagination ::v-deep .el-pagination .el-pager li.active {
+  background: $primary;
+  color: #fff;
+}
 
-    &:hover .tip-bubble,
-    &:focus-within .tip-bubble {
-      display: block;
-    }
-  }
+.pagination ::v-deep .el-pagination .el-pager li:hover,
+.pagination ::v-deep .el-pagination .btn-prev:hover,
+.pagination ::v-deep .el-pagination .btn-next:hover {
+  color: $primary;
+  border-color: $primary;
+}
 
-  td { color: #333; }
-  tbody tr:hover { background: #fafafa; }
+.pagination ::v-deep .el-pagination .btn-prev,
+.pagination ::v-deep .el-pagination .btn-next {
+  color: #333;
 }
 
 .project-name {
@@ -628,5 +591,11 @@ $border: #eee;
   border: 1px solid $primary;
   background: $primary;
   color: #fff;
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  padding: 20px 0 16px;
 }
 </style>
